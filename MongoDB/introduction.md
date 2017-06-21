@@ -1,119 +1,224 @@
-# What is mongoDB? #
+# Introduction #
 
-MongoDB is a document database with the scalability and flexibility that you want with the querying and indexing that you need.
+MongoDB is an open-source document database that provides high performance, high availability, and automatic scaling.
 
-> `MongoDB` 是一个文档式数据库，它在查询和索引方面具备伸缩性和自由性
+> `MongoDB`是一个开源的文档式数据库，承诺提供高性能／高可用性／自动伸缩（能结合Docker然后自动生成销毁容器就更加完美）
 
-+ MongoDB **stores data in flexible, JSON-like documents**, meaning fields can vary from document to document and data structure can be changed over time.
+## Document Database ##
 
-  > `MongoDB` 用一种JSON式的文档自由地存储数据
+A record in MongoDB is a document, which is a data structure composed of field and value pairs. MongoDB documents are similar to JSON objects. The values of fields may include other documents, arrays, and arrays of documents.
+
+> `MongoDB`中的`document`就是记录
+>
+> 换言之，`document`就是表项，也和JSON对象很相视
+>
+> 键值对中的值可以是常见的类型（整数／字符串等），也可以是数组，还可以是另一个`document`
+
+![1](1.svg)
+
+The advantages of using documents are:
+
++ Documents (i.e. objects) correspond to native data types in many programming languages.
+
+  > `Documents`与编程语言的对象具有非常明显的一一对应关系
   >
-  > 这意味着域（fields）和数据结构可以非常容易地变化
+  > 省掉ORM
 
-+ The document model **maps to the objects in your application code**, making data easy to work with.
++ Embedded documents and arrays reduce need for expensive joins.
 
-  > 数据模型与应用需要使用到的对象一一对应（天然ORM），使得数据非常容易被使用
+  > 支持JSON树使得表关联的需要被降低
 
-+ **Ad hoc queries, indexing, and real time aggregation** provide powerful ways to access and analyze your data.
++ Dynamic schema supports fluent polymorphism.
 
-  > 多态的查询和索引方式／实时聚合，为访问和分析数据提供了有力的支持
+  > 动态规则支持流体多态
+  >
+  > 什么是动态规则？
+  >
+  > 什么是流体多态？
 
-+ MongoDB is a **distributed database at its core**, so high availability, horizontal scaling, and geographic distribution are built in and easy to use.
+## Key features ##
 
-  > `MongoDB` 是一种分布式数据库，这意味着它可以容易地水平向扩展／高可用性／按地理分布
+### High Performance ###
 
-+ MongoDB is **free and open-source**, published under the GNU Affero General Public License.
+MongoDB provides high performance data persistence. In particular,
 
-  > 成本低廉，代码开源
+> `MongoDB`提供高性能的数据持久化，特别是：
 
++ Support for embedded data models reduces I/O activity on database system.
 
+  > 支持内嵌的数据模型以减少IO请求的次数
 
-# Makes development easy #
++ Indexes support faster queries and can include keys from embedded documents and arrays.
 
-## Connect ##
+### Rich Query Language ###
 
-```java
-// 1. Connect to MongoDB instance running on localhost
-MongoClient mongoClient = new MongoClient();
+MongoDB supports a rich query language to support read and write operations (CRUD) as well as:
 
-// Access database named 'test'
-MongoDatabase database = mongoClient.getDatabase("test");
++ Data Aggregation
++ Text Search and Geospatial Queries.
 
-// Access collection named 'restaurants'
-MongoCollection<Document> collection = database.getCollection("restaurants");
+# Getting Started #
+
+MongoDB Atlas is a cloud-hosted service for provisioning, running, monitoring, and maintaining MongoDB deployments. It is a fast, easy, and free way to get started with MongoDB. To install and run MongoDB locally, see Install MongoDB.
+
+> `MongoDB`是一种云数据存储服务，是收费的，显然我是不会去用的
+>
+> 那么，动手搭建一个`MongoDB`服务吧
+
+## Install MongoDB ##
+
+```dockerfile
+FROM ubuntu:16.04
+MAINTAINER demons 837940593@qq.com
+
+ADD sources.list /etc/apt/sources.list
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6
+RUN echo "deb [ arch=amd64,arm64 ] http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" \
+    | tee /etc/apt/sources.list.d/mongodb-org-3.4.list
+RUN apt-get update
+
+RUN apt-get install -y mongodb-org
+
+# ENTRYPOINT service mongod start
 ```
 
-Here we are connecting to a locally hosted MongoDB database called testwith a collection named restaurants.
+因为众所周知的原因，需要把`MongoDB`仓库换成阿里云提供的仓库（在此感谢马云爸爸）
 
-`MongoCollection` 是什么概念？是否对应着表？还是对应着表项？
-
-## Insert a document ##
-
-```java
-// 2. Insert 
-List<Document> documents = asList(
-  new Document("name", "Sun Bakery Trattoria")
-    .append("stars", 4)
-    .append("categories",
-      asList("Pizza", "Pasta", "Italian", "Coffee", "Sandwiches")),
-  new Document("name", "Blue Bagels Grill")
-    .append("stars", 3)
-    .append("categories",
-      asList("Bagels", "Cookies", "Sandwiches")),
-  new Document("name", "Hot Bakery Cafe")
-    .append("stars", 4)
-    .append("categories",
-      asList("Bakery", "Cafe", "Coffee", "Dessert")),
-  new Document("name", "XYZ Coffee Bar")
-    .append("stars", 5)
-    .append("categories",
-      asList("Coffee", "Cafe", "Bakery", "Chocolates")),
-  new Document("name", "456 Cookies Shop")
-    .append("stars", 4)
-    .append("categories",
-      asList("Bakery", "Cookies", "Cake", "Coffee")));
-
-collection.insertMany(documents);
+```dockerfile
+RUN echo "deb http://mirrors.aliyun.com/mongodb/apt/ubuntu xenial/mongodb-org/3.4 multiverse" \
+    | tee /etc/apt/sources.list.d/mongodb-org-3.4.list
 ```
 
-5 example documents are being inserted into the restaurantscollection. Each document represents a restuarant with a name, star rating, and categories (stored as an array).
-
-看来`Document` 对应着表项，`Collection` 对应着表
-
-名为`test` 的数据库中包含着一张名为`resturants` 的表，一个数据库应该可以包含多张表
-
-## Create a query ##
-
-```java
-// 3. Query 
-List<Document> results = collection.find().into(new ArrayList<>());
+```text
+deb http://mirrors.163.com/ubuntu/ wily main restricted universe multiverse
+deb http://mirrors.163.com/ubuntu/ wily-security main restricted universe multiverse
+deb http://mirrors.163.com/ubuntu/ wily-updates main restricted universe multiverse
+deb http://mirrors.163.com/ubuntu/ wily-proposed main restricted universe multiverse
+deb http://mirrors.163.com/ubuntu/ wily-backports main restricted universe multiverse
+deb-src http://mirrors.163.com/ubuntu/ wily main restricted universe multiverse
+deb-src http://mirrors.163.com/ubuntu/ wily-security main restricted universe multiverse
+deb-src http://mirrors.163.com/ubuntu/ wily-updates main restricted universe multiverse
+deb-src http://mirrors.163.com/ubuntu/ wily-proposed main restricted universe multiverse
+deb-src http://mirrors.163.com/ubuntu/ wily-backports main restricted universe multiverse
 ```
 
-In this example, we run a simple query to get all of the documents in the restaurants collection and store them as an array.
-
-## Build an index ##
-
-```java
-// 4. Create Index 
-collection.createIndex(Indexes.ascending("name"));
+```shell
+docker build -t mongodb .
 ```
 
-Indexes in MongoDB are similar to indexes in other database systems. MongoDB supports indexes on any field or sub-field of a document in a collection. Here, we are building an index on the name field with sort order ascending.
+## Use Atlas ##
 
-`MongoDB` 是否支持多项联合排序？
+## Documents and Collections ##
 
-不过如果用`MongoDB` 的目的是为了建立JSON树，排序的需求是很低的，应该用简单排序就可以搞定
+MongoDB stores data as BSON documents (binary represenatation of JSON) in collections. MongoDB databases hold collections of documents.
 
-## Aggregate ##
+> `MongoDB` 以BSON的形式存储数据
+>
+> `database` 包含多个`collection`，`collection`包含多个`document`
 
-```java
-// 5. Perform Aggregation
-collection.aggregate(asList(match(eq("categories", "Bakery")),
-  group("$stars", sum("count", 1))));
+### Insert Documents ###
 
-mongoClient.close();
+db.collection.insertMany() can insert multiple documents into a collection. Pass an array of documents to the method.
+
+> `db.collection.insertMany()`可以插入多个`document`
+>
+> 该方法接受一个数组作为参数
+
+The following example inserts new documents into the **inventory** collection:
+
+```javascript
+db.inventory.insertMany([
+   // MongoDB adds the _id field with an ObjectId if _id is not present
+   { item: "journal", qty: 25, status: "A",
+       size: { h: 14, w: 21, uom: "cm" }, tags: [ "blank", "red" ] },
+   { item: "notebook", qty: 50, status: "A",
+       size: { h: 8.5, w: 11, uom: "in" }, tags: [ "red", "blank" ] },
+   { item: "paper", qty: 100, status: "D",
+       size: { h: 8.5, w: 11, uom: "in" }, tags: [ "red", "blank", "plain" ] },
+   { item: "planner", qty: 75, status: "D",
+       size: { h: 22.85, w: 30, uom: "cm" }, tags: [ "blank", "red" ] },
+   { item: "postcard", qty: 45, status: "A",
+       size: { h: 10, w: 15.25, uom: "cm" }, tags: [ "blue" ] }
+]);
 ```
 
-Using MongoDB’s aggregation pipeline, you can filter and analyze data based on a given set of criteria. In this example, we pull all the documents in the restaurants collection that have a category of Bakery using the \$match operator and then group them by their star rating using the \$group operator. Using the accumulator operator, \$sum, we can see how many bakeries in our collection have each star rating.
+insertMany() returns a document that includes the newly inserted documents _id field values. 
 
-`Aggregate` 在我现在的理解中，就是对数据的处理与分析，而且处理过程有点类似于`MapReduce` 
+Use db.collection.insertOne() to insert a single document.
+
+> 如果只需要插入一个`document`，使用`db.collection.insertOne()`方法
+
+### Query Documents ###
+
+#### Select All Documents ####
+
+To select all documents in the collection, pass an empty document as the query filter document to the db.collection.find() method:
+
+> 通过给`db.collection.find()`方法传入一个空`document`作为参数来选择`collection`中的所有`document`
+
+```javascript
+db.inventory.find( {} )
+```
+
+To query for documents that match specific equality conditions, pass the `find()` method a query filter document with the `<field>: <value>` of the desired documents. The following example selects from the `inventory` collection all documents where the `status` equals `"D"`:
+
+> 如果需要查找某一项属性等于某个值的`document`，可以相应的传入键值对集合
+
+```javascript
+db.inventory.find( { status: "D" } )
+```
+
+#### Match an Embedded Document ####
+
+Equality matches on the whole embedded document require an *exact* match of the specified `<value>` document, including the field order. For example, the following query selects all documents where the field `size` equals the document `{ h: 14, w: 21, uom: "cm" }`:
+
+> 如果需要匹配属性中的属性，也出人意料地合理／简单
+>
+> 只需要在查询集合中嵌套查询集合即可
+
+```javascript
+db.inventory.find( { size: { h: 14, w: 21, uom: "cm" } } )
+```
+
+#### Match a Field in an Embedded Document ####
+
+The following example selects all documents where the field `uom` nested in the `size` field equals the string value `"in"`:
+
+> 这可以认为是Match an Embedded Document在一种特殊情况下的语法糖
+
+```javascript
+db.inventory.find( { "size.uom": "in" } )
+```
+
+#### Match an Element in an Array ####
+
+The following example queries for all documents where `tags` is an array that contains the string `"red"` as one of its elements:
+
+```javascript
+db.inventory.find( { tags: "red" } )
+```
+
+#### Match an Array Exactly ####
+
+The following example queries for all documents where the field `tags` value is an array with exactly two elements, `"red"` and `"blank"`, in the specified order:
+
+> 注意顺序都是需要一样的
+
+```javascript
+db.inventory.find( { tags: ["red", "blank"] } )
+```
+
+# Databases and Collections #
+
+## Views ##
+
+## Capped Collections ##
+
+# Documents #
+
+# BSON Type #
+
+# Comparison/Sort Order #
+
+# MongoDB Extended JSON #
+
