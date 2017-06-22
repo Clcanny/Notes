@@ -673,16 +673,184 @@ This also applies to `documents` inserted through update operations with upsert:
 `BSON` strings are UTF-8. In general, drivers for each programming language convert from the language’s string format to UTF-8 when serializing and deserializing `BSON`. This makes it possible to store most international characters in BSON strings with ease.
 
 > 国际化存储是可行的
-`
-In addition, MongoDB `$regex` queries support UTF-8 in the regex string.
+> `
+> In addition, MongoDB `$regex` queries support UTF-8 in the regex string.
 
 > 正则表达式也支持UTF-8
 
 #### Timestamps ####
 
+`BSON` has a special timestamp type for internal `MongoDB` use and is not associated with the regular Date type.
+
+> Timestamp与Date的不同之处在于，Timestamp是给`MongoDB`内部使用的
+>
+> 应该在可读性上稍差
+
+Timestamp values are a 64 bit value where:
+
++ the first 32 bits are a `time_t` value (seconds since the Unix epoch)
++ the second 32 bits are an incrementing `ordinal` for operations within a given second.
+
+If you insert a `document` containing an empty `BSON` timestamp in a top-level field, the `MongoDB` server will replace that empty timestamp with the current timestamp value. For example, if you create an insert a `document` with a timestamp value, as in the following operation:
+
+```javascript
+var a = new Timestamp();
+db.test.insertOne( { ts: a } );
+```
+
+Then, the `db.test.find()` operation will return a `document` that resembles the following:
+
+```javascript
+{ "_id" : ObjectId("542c2b97bac0595474108b48"), "ts" : Timestamp(1412180887, 1) }
+```
+
+If `ts` were a field in an embedded `document`, the server would have left it as an empty timestamp value.
+
 #### Date ####
+
+`BSON` Date is a 64-bit integer that represents the number of milliseconds since the Unix epoch (Jan 1, 1970). This results in a representable date range of about 290 million years into the past and future.
+
+> Date才是我们在其它编程语言中熟悉的日期记录字段
+>
+> 它从一个固定的日期开始，计算某一个日期距离它的毫秒数
+
+![7](7.jpg)
+
+```javascript
+var mydate2 = ISODate()
+```
 
 # Comparison/Sort Order #
 
+When comparing values of different `BSON` types, `MongoDB` uses the following comparison order, from lowest to highest:
+
+> 因为`MongoDB`不对数据库做任何形式的验证，所以可能出现相同的字段在不同的`document`中是不同类型的值的情况
+
+1. MinKey (internal type)
+2. Null
+3. Numbers (ints, longs, doubles, decimals)
+4. Symbol, String
+5. Object
+6. Array
+7. BinData
+8. ObjectId
+9. Boolean
+10. Date
+11. Timestamp
+12. Regular Expression
+13. MaxKey (internal type)
+
+## Numeric Types ##
+
+`MongoDB` treats some types as equivalent for comparison purposes. For instance, numeric types undergo conversion before comparison.
+
+> 数字类型在比较之前都会进行下行转换
+
+## Strings ##
+
+### Binary Comparison ###
+
+By default, `MongoDB` uses the simple binary comparison to compare strings.
+
+> 二进制比较是最简单的，也是对所有类型的值都适用的
+>
+> 但也是对编程者最没用的一种比较方式
+
+### Collation ###
+
+Collation allows users to specify language-specific rules for string comparison, such as rules for lettercase and accent marks.
+
+Collation specification has the following syntax:
+
+```javascript
+{
+   locale: <string>,
+   caseLevel: <boolean>,
+   caseFirst: <string>,
+   strength: <int>,
+   numericOrdering: <boolean>,
+   alternate: <string>,
+   maxVariable: <string>,
+   backwards: <boolean>
+}
+```
+
+我比较关心的是用户能不能自定义排序使用的比较函数（比如说以闭包的形式）？
+
+无论内置的比较方法多么有用，终究不可能解决特定的应用遇到的问题
+
+## Arrays ##
+
+With arrays, a less-than comparison or an ascending sort compares the smallest element of arrays, and a greater-than comparison or a descending sort compares the largest element of the arrays.
+
+> 升序排序比较数组中最小的元素
+>
+> 降序排序比较数组中最大的元素
+
+As such, when comparing a field whose value is a single-element array (e.g. [ 1 ]) with non-array fields (e.g. 2), the comparison is between 1 and 2.
+
+> 因此，数组是能够与单个元素进行比较的
+
+A comparison of an empty array (e.g. [ ]) treats the empty array as less than null or a missing field.
+
+> 空数组有特殊的比较规则
+
+## Dates and Timestamps ##
+
+Date objects sort before Timestamp objects.
+
+## Non-existent Fields ##
+
+The comparison treats a non-existent field as it would an empty `BSON` Object.
+
+> 在比较过程中，如果出现空域，当作空对象处理
+
+As such, a sort on the `a` field in `documents` { } and { a: null } would treat the `documents` as equivalent in sort order.
+
+> 因此，上述两个`documents`在以`a`为排序依据的时候，是等价的
+
+## BinData ##
+
+`MongoDB` sorts BinData in the following order:
+
+1. First, the length or size of the data.
+2. Then, by the `BSON` one-byte subtype.
+3. Finally, by the data, performing a byte-by-byte comparison.
+
 # MongoDB Extended JSON #
 
+`JSON` can only represent a subset of the types supported by `BSON`.
+
+> `JSON`能够使用的类型是`BSON`的一个子集
+>
+> 所以，为了其它`JSON`解析器能够认识从`MongoDB`中取出的数据，我们需要`MongoDB`对输入数据进行限制？
+>
+> 或者是把那些`BSON`支持而`JSON`不支持的类型的值转换成`JSON`类型的值？
+
+To preserve type information, `MongoDB` adds the following extensions to the `JSON` format:
+
++ Strict mode. Strict mode representations of `BSON` types conform to the `JSON` RFC. Any `JSON` parser can parse these strict mode representations as key/value pairs; however, only the `MongoDB` internal`JSON` parser recognizes the type information conveyed by the format.
+
+  > 类似于`JSON`与`BSON`有一种协议，严格模式下的数据表示虽然是`BSON`格式的，但是`JSON`格式可以读取最重要的一部分信息（键值对），但只有`MongoDB`可以读取类型信息
+  >
+  > 这种做法应该属于我上面提到的第二种办法：把`BSON`转换成`JSON`
+  >
+  > 只不过这种转换比较巧妙，可以保留`BSON`的类型信息，然后用不同的解析器有不同的效果
+
++ mongo Shell mode. The `MongoDB` internal JSON parser and the mongo shell can parse this mode.
+
+  > 没看懂，喵喵喵？这和严格模式有什么区别？？
+
+The representation used for the various data types depends on the context in which the `JSON` is parsed.
+
+## Parsers and Supported Format ##
+
+### Input in Strict Mode ###
+
+### Input in mongo Shell Mode ###
+
+### Output in Strict mode ###
+
+### Output in mongo Shell Mode ###
+
+## BSON Data Types and Associated Representations ##
