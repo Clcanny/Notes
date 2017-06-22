@@ -1,6 +1,6 @@
 # Introduction #
 
-`MongoDB` is an open-source document database that provides high performance, high availability, and automatic scaling.
+`MongoDB` is an open-source `document` database that provides high performance, high availability, and automatic scaling.
 
 > `MongoDB`是一个开源的文档式数据库，承诺提供高性能／高可用性／自动伸缩（能结合`Docker`然后自动生成销毁容器就更加完美）
 
@@ -170,7 +170,7 @@ db.inventory.find( { status: "D" } )
 
 #### Match an Embedded Document ####
 
-Equality matches on the whole embedded `document` require an *exact* match of the specified `<value>` `document`, including the field order. For example, the following query selects all `documents` where the field `size` equals the document `{ h: 14, w: 21, uom: "cm" }`:
+Equality matches on the whole embedded `document` require an *exact* match of the specified `<value>` `document`, including the field order. For example, the following query selects all `documents` where the field `size` equals the `document` `{ h: 14, w: 21, uom: "cm" }`:
 
 > 如果需要匹配属性中的属性，也出人意料地合理／简单
 >
@@ -280,7 +280,7 @@ Both the `insertOne()` and the `createIndex()` operations create their respectiv
 
 ### Explicit Creation ###
 
-`MongoDB` provides the `db.createCollection()` method to explicitly create a `collection` with various options, such as setting the maximum size or the documentation validation rules. If you are not specifying these options, you do not need to explicitly create the collection since MongoDB creates new `collections` when you first store data for the collections.
+`MongoDB` provides the `db.createCollection()` method to explicitly create a `collection` with various options, such as setting the maximum size or the documentation validation rules. If you are not specifying these options, you do not need to explicitly create the `collection` since MongoDB creates new `collections` when you first store data for the collections.
 
 > `MongoDB`提供`db.createCollection()`方法去显式创建一个`collection`
 >
@@ -361,17 +361,326 @@ To remove a view, use the `db.collection.drop()` method on the view.
 
 # Documents #
 
+`MongoDB` stores data records as `BSON` `documents`. `BSON` is a binary representation of `JSON` `documents`, though it contains more data types than `JSON`.
+
+![5](5.svg)
+
 ## Document Structure ##
+
+`MongoDB` `documents` are composed of field-and-value pairs and have the following structure:
+
+> `MongoDB` `documents`是有键值对构成的
+
+```javascript
+{
+   field1: value1,
+   field2: value2,
+   field3: value3,
+   ...
+   fieldN: valueN
+}
+```
+
+The value of a field can be any of the `BSON` data types, including other `documents`, arrays, and arrays of `documents`.
+
+> 值的类型可以是基本数据类型，也可以是数组，`document`
+
+For example, the following `document` contains values of varying types:
+
+```javascript
+var mydoc = {
+               _id: ObjectId("5099803df3f4948bd2f98391"),
+               name: { first: "Alan", last: "Turing" },
+               birth: new Date('Jun 23, 1912'),
+               death: new Date('Jun 07, 1954'),
+               contribs: [ "Turing machine", "Turing test", "Turingery" ],
+               views : NumberLong(1250000)
+            }
+```
+
+The above fields have the following data types:
+
++ `_id` holds an `ObjectId`.
++ `name` holds an embedded `document` that contains the fields first and last.
++ `birth` and `death` hold values of the `Date` type.
++ `contribs` holds an array of strings.
++ `views` holds a value of the NumberLong type.
+
+上面的例子出现了`ObjectId`／字符串／时间／数组／`document`
+
+### Field Names ###
+
+Field names are strings.
+
+> 域名是字符串
+
+`Documents` have the following restrictions on field names:
+
+> `document`对于域名有一下限制：
+
++ The field name `_id` is reserved for use as a primary key; its value must be unique in the `collection`, is immutable, and may be of any type other than an array.
+
+  > `_id`是`MongoDB`事先保留的域名，作为这个`document`的主键，自然要具备主键的性质（比如说唯一性）
+  >
+  > 它可以是除了数组以外的其它类型
+
++ The field names cannot start with the dollar sign ($) character.
+
+  > 域名不能以美元符号开头
+  >
+  > 美元符号好像作为了`MongoDB`的保留字符，有特殊的用途
+  >
+  > 类似的做法很常见，有些编程语言甚至规定大写字母开头的都是类型名，小写字母开头的是对象名
+
++ The field names cannot contain the dot (.) character.
+
+  > 类似地，域名中也不能包含点
+
++ The field names cannot contain the null character.
+
+  > 域名不能是空字符串
+
+`BSON` `documents` may have more than one field with the same name.
+
+> `BSON` `documents`允许字段名重复，这很让人惊讶
+
+Most `MongoDB` interfaces, however, represent `MongoDB` with a structure (e.g. a hash table) that does not support duplicate field names. If you need to manipulate `documents` that have more than one field with the same name, see the driver documentation for your driver.
+
+> 不过大多数`MongoDB`的接口都不允许重复的字段（这个比较正常）
+>
+> 如果需要支持重名字段，需要自己写driver
+
+Some `documents` created by internal `MongoDB` processes may have duplicate fields, but no `MongoDB` process will ever add duplicate fields to an existing user `document`.
+
+### Field Value Limit ###
 
 ## Dot Notation ##
 
+`MongoDB` uses the dot notation to access the elements of an array and to access the fields of an embedded `document`.
+
+> `MongoDB`中的点操作符有两个作用：从数组中取元素／从`document`中取元素
+
+### Arrays ###
+
+To specify or access an element of an array by the zero-based index position, concatenate the array name with the dot (.) and zero-based index position, and enclose in quotes:
+
+> 不出意外，索引是从0开始计数的
+>
+> 不过取元素的句子要包含在一对双引号之中，这就是语法噪音了
+
+```javascript
+"<array>.<index>"
+```
+
+For example, given the following field in a `document`:
+
+```javascript
+{
+   ...
+   contribs: [ "Turing machine", "Turing test", "Turingery" ],
+   ...
+}
+```
+
+To specify the third element in the `contribs` array, use the dot notation `"contribs.2"`.
+
+### Embedded Documents ###
+
+To specify or access a field of an embedded `document` with dot notation, concatenate the embedded `document` name with the dot (.) and the field name, and enclose in quotes:
+
+```javascript
+"<embedded document>.<field>"
+```
+
+For example, given the following field in a `document`:
+
+```javascript
+{
+   ...
+   name: { first: "Alan", last: "Turing" },
+   contact: { phone: { type: "cell", number: "111-222-3333" } },
+   ...
+}
+```
+
++ To specify the field named `last` in the `name` field, use the dot notation `"name.last"`.
++ To specify the `number` in the `phone` document in the `contact` field, use the dot notation `"contact.phone.number"`.
+
+和数组类型类似
+
+可以认为数组也是一种特殊的`document`，不过它的域名是默认且特殊的（从0开始递增）
+
+越来越多的语言采用上面那种看法，甚至允许数组索引的自定义，从而消除集合与数组的区别
+
 ## Document Limitations ##
+
+### Document Size Limit ###
+
+The maximum `BSON` `document` size is 16 megabytes.
+
+> 单个`document`的大小不能超过16MB
+
+The maximum `document` size helps ensure that a single `document` cannot use excessive amount of RAM or, during transmission, excessive amount of bandwidth.
+
+> 这个大小限制使得单个文档可以很容易地被放进到内存中
+>
+> 而且如果客户端请求整个文档，也不会带来过大的带宽消耗
+
+ To store `documents` larger than the maximum size, `MongoDB` provides the GridFS API.
+
+### Document Field Order ###
+
+`MongoDB` preserves the order of the `document` fields following write operations except for the following cases:
+
+> `MongoDB`能够保留记录字段的写入顺序，除非发生以下几种情况：
+
++ The `_id` field is always the first field in the document.
+
+  > `_id`字段永远是第一个字段
+
++ Updates that include renaming of field names may result in the reordering of fields in the document.
+
+  > 某个没看懂的操作（喵喵喵🐱）引发了字段的排序
+
+### The _id Field ###
+
+In `MongoDB`, each `document` stored in a `collection` requires a unique `_id` field that acts as a primary key. If an inserted `document` omits the `_id` field, the `MongoDB` driver automatically generates an `ObjectId` for the` _id` field.
+
+> 主键是不可缺失的，而且`MongoDB`规定了它是`_id`
+>
+> 所以如果插入语句省略了`_id`，会有driver负责生成
+>
+> 我就喜欢driver负责生成`_id`这件事，要不类似于`Firebase`的生成key的服务做起来也很头疼
+
+This also applies to `documents` inserted through update operations with upsert: true.
+
+The `_id` field has the following behavior and constraints:
+
++ By default, `MongoDB` creates a unique index on the `_id` field during the creation of a `collection`.
++ The `_id` field is always the first field in the `documents`. If the server receives a `document` that does not have the `_id` field first, then the server will move the field to the beginning.
++ The `_id` field may contain values of any `BSON` data type, other than an array.
+
+这三条都是前面说过的，不再赘述
+
+The following are common options for storing values for _id:
+
+> 如果不采取自动生成的策略，可以采用以下值填充`_id`
+
++ Use an `ObjectId`.
++ Use a natural unique identifier, if available. This saves space and avoids an additional index.
++ Generate an auto-incrementing number.
++ Generate a UUID in your application code. For a more efficient storage of the UUID values in the collection and in the _id index, store the UUID as a value of the BSON BinData type.
+  Index keys that are of the BinData type are more efficiently stored in the index if:
+  + the binary subtype value is in the range of 0-7 or 128-135, and
+  + the length of the byte array is: 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 20, 24, or 32.
++ Use your driver’s BSON UUID facility to generate UUIDs. Be aware that driver implementations may implement UUID serialization and deserialization logic differently, which may not be fully compatible with other drivers. See your driver documentation for information concerning UUID interoperability.
 
 ## Other Uses of the Document Structure ##
 
+In addition to defining data records,` MongoDB` uses the `document` structure throughout, including but not limited to: query filters, update specifications `documents`, and index specification `documents`.
+
+> `document`除了用于定义记录，还可以用于查询／升级等
+
+#### Query Filter Documents ####
+
+Query filter `documents` specify the conditions that determine which records to select for read, update, and delete operations.
+
+> `document`用于指定查找条件，这个在前面也有提到过
+
+You can use `<field>:<value>` expressions to specify the equality condition and query operator expressions.
+
+```javascript
+{
+  <field1>: <value1>,
+  <field2>: { <operator>: <value> },
+  ...
+}
+```
+
+#### Update Specification Documents ####
+
+Update specification `documents` use update operators to specify the data modifications to perform on specific fields during an `db.collection.update()` operation.
+
+```javascript
+{
+  <operator1>: { <field1>: <value1>, ... },
+  <operator2>: { <field2>: <value2>, ... },
+  ...
+}
+```
+
+#### Index Specification Documents ####
+
+Index specifications `document` define the field to index and the index type:
+
+```javascript
+{ <field1>: <type1>, <field2>: <type2>, ...  }
+```
+
 ## Additional Resources ##
 
+Thinking in Documents: Part 1
+
 # BSON Type #
+
+`BSON` is a binary serialization format used to store `documents` and make remote procedure calls in `MongoDB`.
+
+`BSON` supports the following data types as values in `documents`. Each data type has a corresponding number and string alias that can be used with the `$type` operator to query documents by `BSON` type.
+
+> 还可以按类型查询？
+
+![6](6.jpg)
+
+剩下的类型去BSON官网查询
+
+#### ObjectId ####
+
+ObjectIds are small, likely unique, fast to generate, and ordered. ObjectId values consists of 12-bytes, where the first four bytes are a timestamp that reflect the ObjectId’s creation, specifically:
+
++ a 4-byte value representing the seconds since the Unix epoch,
++ a 3-byte machine identifier,
++ a 2-byte process id, and
++ a 3-byte counter, starting with a random value.
+
+作为普通用户，理解成永不重复的自动生成的key就可以了
+
+In `MongoDB`, each `document` stored in a `collection` requires a unique `_id` field that acts as a primary key. If an inserted `document` omits the `_id` field, the `MongoDB` driver automatically generates an `ObjectId` for the `_id` field.
+
+> `MongoDB`自动生成的`_id`就是`ObjectId`，莫名开心
+
+This also applies to `documents` inserted through update operations with upsert: true.
+
+`MongoDB` clients should add an `_id` field with a unique `ObjectId`. Using `ObjectIds` for the `_id` field provides the following additional benefits:
+
+> 用`ObjectId`还可以带来一些好处：
+
++ in the mongo shell, you can access the creation time of the `ObjectId`, using the `ObjectId.getTimestamp()` method.
+
+  > 可以通过`ObjectId`获取创建时间
+  >
+  > 这也自然引出下一个好处
+
++ sorting on an `_id` field that stores `ObjectId` values is roughly equivalent to sorting by creation time.
+
+  > 对`ObjectId`排序大致等于对创建时间排序
+
+  The relationship between the order of `ObjectId` values and generation time is not strict within a single second. If multiple systems, or multiple processes or threads on a single system generate values, within a single second; `ObjectId` values do not represent a strict insertion order. Clock skew between clients can also result in non-strict ordering even for values because client drivers generate `ObjectId` values.
+
+  > 但如果要求精确，不能用`ObjectId`代替创建时间进行排序
+
+#### String ####
+
+`BSON` strings are UTF-8. In general, drivers for each programming language convert from the language’s string format to UTF-8 when serializing and deserializing `BSON`. This makes it possible to store most international characters in BSON strings with ease.
+
+> 国际化存储是可行的
+
+In addition, MongoDB `$regex` queries support UTF-8 in the regex string.
+
+> 正则表达式也支持UTF-8
+
+#### Timestamps ####
+
+#### Date ####
 
 # Comparison/Sort Order #
 
