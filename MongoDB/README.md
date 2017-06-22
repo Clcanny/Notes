@@ -25,3 +25,5 @@
 [Glance](Glance.md)
 
 [Introduction](Introduction/Introduction.md)
+
+[MongoShell](MongoShell/MongoShell.md)
