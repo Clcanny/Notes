@@ -504,7 +504,7 @@ For example, given the following field in a `document`:
 ```
 
 + To specify the field named `last` in the `name` field, use the dot notation `"name.last"`.
-+ To specify the `number` in the `phone` document in the `contact` field, use the dot notation `"contact.phone.number"`.
++ To specify the `number` in the `phone` `document` in the `contact` field, use the dot notation `"contact.phone.number"`.
 
 和数组类型类似
 
@@ -569,11 +569,11 @@ The following are common options for storing values for _id:
 + Use an `ObjectId`.
 + Use a natural unique identifier, if available. This saves space and avoids an additional index.
 + Generate an auto-incrementing number.
-+ Generate a UUID in your application code. For a more efficient storage of the UUID values in the collection and in the _id index, store the UUID as a value of the BSON BinData type.
++ Generate a UUID in your application code. For a more efficient storage of the UUID values in the `collection` and in the `_id` index, store the UUID as a value of the `BSON` BinData type.
   Index keys that are of the BinData type are more efficiently stored in the index if:
   + the binary subtype value is in the range of 0-7 or 128-135, and
   + the length of the byte array is: 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 20, 24, or 32.
-+ Use your driver’s BSON UUID facility to generate UUIDs. Be aware that driver implementations may implement UUID serialization and deserialization logic differently, which may not be fully compatible with other drivers. See your driver documentation for information concerning UUID interoperability.
++ Use your driver’s `BSON` UUID facility to generate UUIDs. Be aware that driver implementations may implement UUID serialization and deserialization logic differently, which may not be fully compatible with other drivers. See your driver documentation for information concerning UUID interoperability.
 
 ## Other Uses of the Document Structure ##
 
@@ -670,7 +670,7 @@ This also applies to `documents` inserted through update operations with upsert:
 
 #### String ####
 
-`BSON` strings are UTF-8. In general, drivers for each programming language convert from the language’s string format to UTF-8 when serializing and deserializing `BSON`. This makes it possible to store most international characters in BSON strings with ease.
+`BSON` strings are UTF-8. In general, drivers for each programming language convert from the language’s string format to UTF-8 when serializing and deserializing `BSON`. This makes it possible to store most international characters in `BSON` strings with ease.
 
 > 国际化存储是可行的
 > `
@@ -837,7 +837,7 @@ To preserve type information, `MongoDB` adds the following extensions to the `JS
   >
   > 只不过这种转换比较巧妙，可以保留`BSON`的类型信息，然后用不同的解析器有不同的效果
 
-+ mongo Shell mode. The `MongoDB` internal JSON parser and the mongo shell can parse this mode.
++ mongo Shell mode. The `MongoDB` internal `JSON` parser and the mongo shell can parse this mode.
 
   > 没看懂，喵喵喵？这和严格模式有什么区别？？
 
