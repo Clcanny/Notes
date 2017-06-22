@@ -210,11 +210,166 @@ db.inventory.find( { tags: ["red", "blank"] } )
 
 # Databases and Collections #
 
+`MongoDB` stores `BSON` `documents`, i.e. data records, in `collections`; the `collections` in `databases`.
+
+![2](2.svg)
+
+## Databases ##
+
+由于使用`Docker`，不具备localhost，所以直接启动`Mongo`会导致错误
+
+![3](3.png)
+
+```shell
+vim /etc/mongod.conf
+```
+
+```text
+# network interfaces
+net:
+  port: 27017
+  bindIp: 0.0.0.0
+```
+
+```shell
+mongod --config /etc/mongod.conf &
+mongo
+```
+
+In `MongoDB`, `databases` hold `collections` of `documents`.
+
+To select a `database` to use, in the mongo shell, issue the use `<db>` statement, as in the following example:
+
+```shell
+use myDB
+```
+
+### Create a Database ###
+
+If a `database` does not exist, `MongoDB` creates the `database` when you first store data for that `database`. As such, you can switch to a non-existent `database` and perform the following operation in the mongo shell:
+
+```shell
+use myNewDB
+db.myNewCollection1.insertOne( { x: 1 } )
+```
+
+> 如果数据库不存在，在插入第一个`collection`的时候就会自动创建
+>
+> 还可以看出，如果`collection`不存在，插入第一个`document`的时候也会自动创建
+
+The `insertOne()` operation creates both the `database` `myNewDB` and the `collection` `myNewCollection1` if they do not already exist.
+
+## Collections ##
+
+`MongoDB` stores `documents` in `collections`. `Collections` are analogous to tables in relational databases.
+
+> 不再说`database`／`collection`／`document`三个概念
+
+### Create a Collection ###
+
+If a `collection` does not exist, `MongoDB` creates the `collection` when you first store data for that `collection`.
+
+```shell
+db.myNewCollection2.insertOne( { x: 1 } )
+db.myNewCollection3.createIndex( { y: 1 } )
+```
+
+Both the `insertOne()` and the `createIndex()` operations create their respective `collection` if they do not already exist.
+
+![4](4.png)
+
+### Explicit Creation ###
+
+`MongoDB` provides the `db.createCollection()` method to explicitly create a `collection` with various options, such as setting the maximum size or the documentation validation rules. If you are not specifying these options, you do not need to explicitly create the collection since MongoDB creates new `collections` when you first store data for the collections.
+
+> `MongoDB`提供`db.createCollection()`方法去显式创建一个`collection`
+>
+> 这个方法接受很多描述这个`collection`性质的参数，如果不需要使用这个参数，就不需要使用这个方法
+
+### Document Validation ###
+
+By default, a `collection` does not require its `documents` to have the same schema; i.e. the `documents` in a single `collection` do not need to have the same set of fields and the data type for a field can differ across `documents` within a `collection`.
+
+> 即为数据添加验证规则
+
+### Modifying Document Structure ###
+
+To change the structure of the `documents` in a `collection`, such as add new fields, remove existing fields, or change the field values to a new type, update the `documents` to the new structure.
+
 ## Views ##
+
+Starting in version 3.4, `MongoDB` adds support for creating read-only `views` from existing `collections` or other `views`.
+
+> 这是从传统关系型数据库中借鉴的概念吗？
+>
+> 是数据的一种表现形式？
+
+### Create View ###
+
+To create or define a `view`, `MongoDB` 3.4 introduces:
+
++ the `viewOn` and `pipeline` options to the existing `create` command (and `db.createCollection` helper)
+
+  ```shell
+  db.runCommand( { create: <view>, viewOn: <source>, pipeline: <pipeline> } )
+  ```
+
+  or if specifying a default `collation` for the view:
+
+  ```shell
+  db.runCommand( { create: <view>, viewOn: <source>, pipeline: <pipeline>, collation: <collation> } )
+  ```
+
+
++ a new mongo shell helper `db.createView()`
+
+  ```shell
+  db.createView(<view>, <source>, <pipeline>, <collation> )
+  ```
+
+### Behavior ###
+
++ Read only（只读）
+
++ Index Use and Sort Operations
+
+  + Views use indexes of the underlying collection.
+
+    > 类似于迭代器的概念？或者是MPL中的视图概念？
+    >
+    > 反正是一种效率优于拷贝的实现？
+
+  + You cannot specify a `$natural` sort on a view.
+
++ Projection Restrictions
+
++ Immutable Name
+
++ View Creation
+
++ Sharded View
+
++ Views and Collation
+
++ Public View Definition
+
+### Drop a view ###
+
+To remove a view, use the `db.collection.drop()` method on the view.
 
 ## Capped Collections ##
 
 # Documents #
+
+## Document Structure ##
+
+## Dot Notation ##
+
+## Document Limitations ##
+
+## Other Uses of the Document Structure ##
+
+## Additional Resources ##
 
 # BSON Type #
 

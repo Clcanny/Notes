@@ -1,6 +1,6 @@
 # What is mongoDB? #
 
-MongoDB is a document database with the scalability and flexibility that you want with the querying and indexing that you need.
+`MongoDB` is a `document` `database` with the scalability and flexibility that you want with the querying and indexing that you need.
 
 > `MongoDB`是一个文档式数据库，它在查询和索引方面具备伸缩性和自由性
 
@@ -43,7 +43,7 @@ MongoDatabase database = mongoClient.getDatabase("test");
 MongoCollection<Document> collection = database.getCollection("restaurants");
 ```
 
-Here we are connecting to a locally hosted MongoDB database called testwith a collection named restaurants.
+Here we are connecting to a locally hosted `MongoDB` `database` called testwith a `collection` named restaurants.
 
 `MongoCollection`是什么概念？是否对应着表？还是对应着表项？
 
@@ -76,7 +76,7 @@ List<Document> documents = asList(
 collection.insertMany(documents);
 ```
 
-5 example documents are being inserted into the restaurantscollection. Each document represents a restuarant with a name, star rating, and categories (stored as an array).
+5 example `documents` are being inserted into the `restaurantscollection`. Each `document` represents a restuarant with a name, star rating, and categories (stored as an array).
 
 看来`Document`对应着表项，`Collection`对应着表
 
@@ -89,7 +89,7 @@ collection.insertMany(documents);
 List<Document> results = collection.find().into(new ArrayList<>());
 ```
 
-In this example, we run a simple query to get all of the documents in the restaurants collection and store them as an array.
+In this example, we run a simple query to get all of the `documents` in the restaurants `collection` and store them as an array.
 
 ## Build an index ##
 
@@ -98,7 +98,7 @@ In this example, we run a simple query to get all of the documents in the restau
 collection.createIndex(Indexes.ascending("name"));
 ```
 
-Indexes in MongoDB are similar to indexes in other database systems. MongoDB supports indexes on any field or sub-field of a document in a collection. Here, we are building an index on the name field with sort order ascending.
+Indexes in `MongoDB` are similar to indexes in other `database` systems. `MongoDB` supports indexes on any field or sub-field of a `document` in a `collection`. Here, we are building an index on the name field with sort order ascending.
 
 `MongoDB`是否支持多项联合排序？
 
@@ -114,6 +114,6 @@ collection.aggregate(asList(match(eq("categories", "Bakery")),
 mongoClient.close();
 ```
 
-Using MongoDB’s aggregation pipeline, you can filter and analyze data based on a given set of criteria. In this example, we pull all the documents in the restaurants collection that have a category of Bakery using the \$match operator and then group them by their star rating using the \$group operator. Using the accumulator operator, \$sum, we can see how many bakeries in our collection have each star rating.
+Using `MongoDB`’s aggregation pipeline, you can filter and analyze data based on a given set of criteria. In this example, we pull all the `documents` in the restaurants `collection` that have a category of Bakery using the \$match operator and then group them by their star rating using the \$group operator. Using the accumulator operator, \$sum, we can see how many bakeries in our `collection` have each star rating.
 
 `Aggregate`在我现在的理解中，就是对数据的处理与分析，而且处理过程有点类似于`MapReduce`
