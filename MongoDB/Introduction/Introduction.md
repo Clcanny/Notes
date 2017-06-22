@@ -14,7 +14,7 @@ A record in `MongoDB` is a `document`, which is a data structure composed of fie
 >
 > 键值对中的值可以是常见的类型（整数／字符串等），也可以是数组，还可以是另一个`document`
 
-![1](1.svg)
+![1](1.jpg)
 
 The advantages of using `documents` are:
 
@@ -212,7 +212,7 @@ db.inventory.find( { tags: ["red", "blank"] } )
 
 `MongoDB` stores `BSON` `documents`, i.e. data records, in `collections`; the `collections` in `databases`.
 
-![2](2.svg)
+![2](2.jpg)
 
 ## Databases ##
 
@@ -363,7 +363,7 @@ To remove a view, use the `db.collection.drop()` method on the view.
 
 `MongoDB` stores data records as `BSON` `documents`. `BSON` is a binary representation of `JSON` `documents`, though it contains more data types than `JSON`.
 
-![5](5.svg)
+![5](5.jpg)
 
 ## Document Structure ##
 
