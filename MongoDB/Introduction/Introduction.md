@@ -673,7 +673,7 @@ This also applies to `documents` inserted through update operations with upsert:
 `BSON` strings are UTF-8. In general, drivers for each programming language convert from the language’s string format to UTF-8 when serializing and deserializing `BSON`. This makes it possible to store most international characters in BSON strings with ease.
 
 > 国际化存储是可行的
-
+`
 In addition, MongoDB `$regex` queries support UTF-8 in the regex string.
 
 > 正则表达式也支持UTF-8
