@@ -4,13 +4,13 @@
 
 > `MongoDB`是一个文档式数据库，它在查询和索引方面具备伸缩性和自由性
 
-+ MongoDB **stores data in flexible, JSON-like documents**, meaning fields can vary from document to document and data structure can be changed over time.
++ MongoDB **stores data in flexible, JSON-like documents**, meaning fields can vary from `document` to `document` and data structure can be changed over time.
 
   > `MongoDB`用一种JSON式的文档自由地存储数据
   >
   > 这意味着域（fields）和数据结构可以非常容易地变化
 
-+ The document model **maps to the objects in your application code**, making data easy to work with.
++ The `document` model **maps to the objects in your application code**, making data easy to work with.
 
   > 数据模型与应用需要使用到的对象一一对应（天然ORM），使得数据非常容易被使用
 
