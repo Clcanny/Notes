@@ -775,6 +775,14 @@ The query returns only the `document` that does not contain the **item** field.
 
 ## Iterate a Cursor in the mongo Shell ##
 
+The **db.collection.find()** method returns a **cursor**. To access the `documents`, you need to iterate the cursor. However, in the mongo shell, if the returned cursor is not assigned to a variable using the var keyword, then the cursor is automatically iterated up to 20 times to print up to the first 20 documents in the results.
+
+> 迭代器与自动迭代的那些事.txt
+
+The following examples describe ways to manually iterate the cursor to access the `documents` or to use the **iterator index**.
+
+
+
 ### Manually Iterate the Cursor ###
 
 ### Iterator Index ###

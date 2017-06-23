@@ -28,7 +28,7 @@ If you use the shell to evaluate a JavaScript file or expression, either by usin
 
 You can prevent **.mongorc.js** from being loaded by using the **—norc** option.
 
-> 还可以用**-norc**避免**.mongorc.js**文件的执行
+> 还可以用**\-norc**避免**.mongorc.js**文件的执行
 
 ## Working with the mongo Shell ##
 
