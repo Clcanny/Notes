@@ -408,7 +408,83 @@ This page provides examples of query operations on array fields using the **db.c
 
 ### Match an Array ###
 
+To specify equality condition on an array, use the query `document` { \<field>: \<value> } where \<value> is the exact array to match, including the order of the elements.
 
+The following example queries for all documents where the **field** tags value is an array with **exactly** two elements, **"red"** and **"blank"**, in the specified order:
+
+![16](16.jpg)
+
+数组默认是全部匹配的，也就是上面提到的**"exactly"**，从例子中可以看到，部分是不能匹配的，乱序也是不能匹配的
+
+如果希望乱序／部分也能够匹配：
+
+![17](17.jpg)
+
+### Query an Array for an Element ###
+
+To query if the array field contains at least **one** element with the specified value, use the filter { \<field>: \<value> } where \<value> is the element value.
+
+![18](18.jpg)
+
+现在我们有两种部分匹配的查找办法
+
+To specify conditions on the elements in the array field, use **query operators** in the query filter `document`:
+
+> （这个很重要）对数组中的元素如何进行条件限定？
+
+```javascript
+{ <array field>: { <operator1>: <value1>, ... } }
+```
+
+![19](19.jpg)
+
+至少一个元素大于20
+
+### Specify Multiple Conditions for Array Elements ###
+
+When specifying compound conditions on array elements, you can specify the query such that either a single array element meets these condition or any combination of array elements meets the conditions.
+
+> 对于数组的多条件限制，存在两种情况：
+>
+> 要求某一个特定的元素满足所有的条件
+>
+> 允许元素A满足一个条件，元素B满足另一个条件，元素C满足另一个条件等等
+
+#### Query an Array with Compound Filter Conditions on the Array Elements ####
+
+The following example queries for documents where the **dim_cm** array contains elements that in some combination satisfy the query conditions; e.g., one element can satisfy the greater than 15 condition and another element can satisfy the less than 20 condition, or a single element can satisfy both:
+
+> 下面这个例子对应的是第二种情况，允许不同的元素分别满足不同的条件
+
+```javascript
+db.inventory.find( { dim_cm: { $gt: 15, $lt: 20 } } )
+```
+
+#### Query for an Array Element that Meets Multiple Criteria ####
+
+Use **$elemMatch** operator to specify multiple criteria on the elements of an array such that at least **one** array element satisfies **all** the specified criteria.
+
+The following example queries for documents where the dim_cm array contains at least one element that is both greater than (**\$gt**) 22 and less than (**\$lt**) 30:
+
+```javascript
+db.inventory.find( { dim_cm: { $elemMatch: { $gt: 22, $lt: 30 } } } )
+```
+
+#### Query for an Element by the Array Index Position ####
+
+Using the **dot notation**, you can specify query conditions for an element at a particular index or position of the array. The array uses zero-based indexing.
+
+```javascript
+db.inventory.find( { "dim_cm.1": { $gt: 25 } } )
+```
+
+#### Query an Array by Array Length ####
+
+Use the **$size** operator to query for arrays by number of elements. For example, the following selects documents where the array tags has 3 elements.
+
+```javascript
+db.inventory.find( { "tags": { $size: 3 } } )
+```
 
 ## Query an Array of Embedded Documents ##
 
