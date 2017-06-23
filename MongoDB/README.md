@@ -24,6 +24,6 @@
 
 [Glance](Glance.md)
 
-[Introduction](Introduction/Introduction.md)
+[Introduction](Introduction/README.md)
 
-[MongoShell](MongoShell/MongoShell.md)
+[MongoShell](MongoShell/README.md)
