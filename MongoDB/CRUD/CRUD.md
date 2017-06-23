@@ -488,11 +488,300 @@ db.inventory.find( { "tags": { $size: 3 } } )
 
 ## Query an Array of Embedded Documents ##
 
+This page provides examples of query operations on an array of nested `documents` using the **db.collection.find()** method in the mongo shell.
+
+> 数组的元素是`document`，如何查询呢？
+>
+> 这几乎是最复杂的一种情况
+>
+> document中含有数组通过点操作符就可以解决
+
+The examples on this page use the **inventory** `collection`. To populate the **inventory** `collection`, run the following:
+
+![20](20.jpg)
+
+### Query for a Document Nested in an Array ###
+
+The following examples selects all `documents` where an element in the **instock** array matches the specified `document`:
+
+![20](20.jpg)
+
+![21](21.jpg)
+
+就从上面两个例子来看，数组的元素是基本类型还是`document`不太影响，一样用
+
+Equality matches on the whole embedded/nested `document` require an **exact** match of the specified `document`, including the field **order**.
+
+> 不过涉及到`document`，就要求全部字段匹配，甚至包括字段顺序
+
+For example, the following query does not match any `documents` in the **inventory** `collection`:
+
+![22](22.jpg)
+
+### Specify a Query Condition on a Field in an Array of Documents ###
+
+#### Use the Array Index to Query for a Field in the Embedded Document ####
+
+Using the **dot notation**, you can specify query conditions for field in a `document` at a particular index or position of the array. The array uses zero-based indexing.
+
+> 用点操作符就指定了固定的元素，然后就和查询普通`document`没什么区别，这我也能想到
+
+The following example selects all `documents` where the **instock** array has as its first element a `document` that contains the field **qty** whose value is less than or equal to 20:
+
+```javascript
+db.inventory.find( { 'instock.0.qty': { $lte: 20 } } )
+```
+
+#### Specify a Query Condition on a Field Embedded in an Array of Documents ####
+
+If you do not know the index position of the `document` nested in the array, concatenate the name of the array field, with a dot (***.***) and the name of the field in the nested `document`.
+
+> 这就很机智了，如果你不知道具体的下标，可以省略下标
+
+The following example selects all `documents` where the **instock** array has **at least one** embedded `document` that contains the field **qty** whose value is less than or equal to 20:
+
+![23](23.jpg)
+
+### Specify Multiple Conditions for Array of Documents ###
+
+还是两种情况：
+
+1. 允许多个元素分别满足其中一个或多个条件
+2. 至少一个元素满足所有条件
+
+When specifying conditions on more than one field nested in an array of `documents`, you can specify the query such that either a single `document` meets these condition or any combination of `documents `(including a single `document`) in the array meets the conditions.
+
+> 还是我之前的那个意思
+>
+> 我猜测还是用arrayName.fieldName来选择未知的元素，然后结合前面的方法完成这两个目标
+
+#### A Single Nested Document Meets Multiple Query Conditions on Nested Fields ####
+
+Use **$elemMatch** operator to specify multiple criteria on an array of embedded `documents` such that **at least one** embedded `document` satisfies all the specified criteria.
+
+The following example queries for `documents` where the **instock** array has **at least one** embedded `document` that contains both the field **qty** equal to 5 and the field **warehouse** equal to A:
+
+> 下面的例子就是第二种情况：至少一个元素满足所有条件
+
+![24](24.jpg)
+
+注意允许乱序
+
+The following example queries for `documents` where the **instock** array has at least one embedded `document` that contains the field **qty** that is greater than 10 and less than or equal to 20:
+
+```javascript
+db.inventory.find( { "instock": { $elemMatch: { qty: { $gt: 10, $lte: 20 } } } } )
+```
+
+#### Combination of Elements Satisfies the Criteria ####
+
+If the compound query conditions on an array field do not use the **$elemMatch** operator, the query selects those `documents` whose array contains any combination of elements that satisfies the conditions.
+
+> 这是前面提到的第一种情况
+>
+> 什么都不干的默认结果就是这个
+
+For example, the following query matches `documents` where **any** `document` nested in the **instock** array has the **qty** field greater than 10 and any `document` (but **not necessarily** the same embedded `document`) in the array has the **qty** field less than or equal to 20:
+
+```javascript
+db.inventory.find( { "instock.qty": { $gt: 10,  $lte: 20 } } )
+```
+
+![25](25.jpg)
+
+The following example queries for `documents` where the **instock** array has at least one embedded `document` that contains the field **qty** equal to 5 and at least one embedded `document` (but **not necessarily** the same embedded `document`) that contains the field **warehouse** equal to A:
+
+> 注意不必要时同一个内嵌`document`
+
+```javascript
+db.inventory.find( { "instock.qty": 5, "instock.warehouse": "A" } )
+```
+
 ## Project Fields to Return from Query ##
+
+By default, queries in `MongoDB` return all fields in matching `documents`. To limit the amount of data that `MongoDB` sends to applications, you can include a **projection** `document` to specify or restrict fields to return.
+
+> 默认来说，`MongoDB`会返回选中的文档的所有域，但也许不是所有域应用都需要，这样会浪费流量
+>
+> 因此我们可以在查询的时候说明我们要哪些域
+
+This page provides examples of query operations with **projection** using the **db.collection.find()** method in the mongo shell. The examples on this page use the **inventory** `collection`. To populate the **inventory** `collection`, run the following:
+
+![26](26.jpg)
+
+### Return All Fields in Matching Documents ###
+
+If you do not specify a **projection** `document`, the **db.collection.find()** method returns all fields in the matching `documents`.
+
+> 我也不明白这个用于选定域的`document`为什么被称为**projection**？
+
+The following example returns all fields from all `documents` in the **inventory** `collection` where the **status** equals "A":
+
+```javascript
+db.inventory.find( { status: "A" } )
+```
+
+The operation corresponds to the following SQL statement:
+
+```sql
+SELECT * from inventory WHERE status = "A"
+```
+
+### Return the Specified Fields and the _id Field Only ###
+
+A projection can explicitly include several fields by setting the **\<field>** to **1** in the projection `document`. The following operation returns all `documents` that match the query. In the result set, only the **item**, **status** and, by default, the **_id** fields return in the matching `documents`.
+
+![27](27.jpg)
+
+这看来**\<field>**的值只有是0和不是0的区别，换句话来说，这就是一个伪装成整数类型值的Boolean类型值
+
+The operation corresponds to the following SQL statement:
+
+```sql
+SELECT _id, item, status from inventory WHERE status = "A"
+```
+
+### Suppress _id Field ###
+
+You can remove the **_id** field from the results by setting its exclusion **\<field>** to **0** in the projection, as in the following example:
+
+> 看来这真的是一个波尔值啊（咩咩咩🐑）
+
+![28](28.jpg)
+
+我果然是对的（嘻嘻😁）
+
+The operation corresponds to the following SQL statement:
+
+```sql
+SELECT item, status from inventory WHERE status = "A"
+```
+
+### Return All But the Excluded Fields ###
+
+Instead of listing the fields to return in the matching `document`, you can use a projection to exclude specific fields. The following example which returns all fields except for the **status** and the **instock** fields in the matching `documents`:
+
+> 如果猜的是对的，把要屏蔽的属性设置为0即可
+
+![29](29.jpg)
+
+With the exception of the **_id** field, you cannot combine inclusion and exclusion statements in projection `documents`.
+
+> 主键**_id**总是有特权的，无论是在输入时还是在输出时
+
+### Return Specific Fields in Embedded Documents ###
+
+You can return specific fields in an embedded `document`. Use the dot notation to refer to the embedded field and set to **1** in the projection `document`.
+
+The following example returns: the **_id** field (returned by default), **item** field, **status** field, and the **uom** field in the **size** `document`; the **uom** field remains embedded in the **size** `documen`t.
+
+![30](30.jpg)
+
+可以看到size属性中只返回了uom属性的值
+
+组合点操作符去处理内嵌`document`是一件意料之中的事情
+
+不得不所，`MongoDB`的查询语言设计得挺好的
+
+### Suppress Specific Fields in Embedded Documents ###
+
+You can suppress specific fields in an embedded `document`. Use the dot notation to refer to the embedded field in the projection `document` and set to **0**.
+
+![31](31.jpg)
+
+注意包含和去除是不能混合的：
+
+![33](32.jpg)
+
+### Projection on Embedded Documents in an Array ###
+
+Use dot notation to project specific fields inside `documents` embedded in an array.
+
+![33](33.jpg)
+
+我还以为是选定某一个下标的元素呢（😂）
+
+不过选定数组中的`document`的某个属性也挺有用的，用的方法也合情合理，还是用点操作符
+
+![34](34.jpg)
+
+显然，它把下标当成了属性名字，那请问怎么指定选中数组中的某个元素呢？
+
+### Project Specific Array Elements in the Returned Array ###
+
+For fields that contain arrays, `MongoDB` provides the following projection operators: **\$elemMatch**, **\$slice**, and **\$**.
+
+> 诶，我提出了一个好问题？还是我和文档的原作者心有灵犀？
+
+The following example uses the **\$slice** projection operator to return just the last element in the **instock** array.
+
+![35](35.jpg)
+
+**$elemMatch**, **\$slice**, and **\$** are the **only** way to project specific elements to include in the returned array. 
+
+> 唯一方式，稳
+
+For instance, you **cannot** project specific array elements using the array index; e.g. **{ "instock.0": 1 }** projection will not project the array with the first element.
+
+> 还顺便打了我之前的脸，很稳
+
+话说**\$elemMatch**和**\$**怎么用来着？
 
 ## Query for Null or Missing Fields ##
 
+Different query operators in `MongoDB` treat **null** values differently.
+
+> 不同的查询方法对**null**的处理方法很不一样
+>
+> 这个**null**指的是query `document`中的**null**？
+
+This page provides examples of operations that query for **null** values using the **db.collection.find()** method in the mongo shell.
+
+准备工作：
+
+![36](36.jpg)
+
+### Equality Filter ###
+
+The **{ item : null }** query matches `documents` that either contain the item field whose value is **null** **or** that do **not** contain the item field.
+
+> 如果查询文档中的某个属性的属性值为空，会匹配该属性值为空的文档或者不具备该属性的文档
+
+For example, the following query returns both `documents`:
+
+![37](37.jpg)
+
+### Type Check ###
+
+The **{ item : { $type: 10 } }** query matches `documents` that contains the **item** field whose value is **null** **only**; i.e. the value of the item field is of BSON Type Null (i.e. 10) :
+
+> 10到底是什么意思？
+
+![38](38.jpg)
+
+感情10是类型标号？每个数字代表一个类型？
+
+那请问插入的时候写的是null，`MongoDB`凭什么认定这个域是什么类型？
+
+The query returns only the `document` where the **item** field has a **null** value.
+
+### Existence Check ###
+
+The **{ item : { $exists: false } }** query matches `documents` that **do not** contain the item field:
+
+![39](39.jpg)
+
+The query returns only the `document` that does not contain the **item** field.
+
 ## Iterate a Cursor in the mongo Shell ##
+
+### Manually Iterate the Cursor ###
+
+### Iterator Index ###
+
+### Cursor Behaviors ###
+
+### Cursor Information ###
 
 # Update Documents #
 
