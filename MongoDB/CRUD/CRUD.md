@@ -781,17 +781,227 @@ The **db.collection.find()** method returns a **cursor**. To access the `documen
 
 The following examples describe ways to manually iterate the cursor to access the `documents` or to use the **iterator index**.
 
-
-
 ### Manually Iterate the Cursor ###
+
+In the mongo shell, when you assign the cursor returned from the **find()** method to a variable using the **var** keyword, the cursor does not automatically iterate.
+
+> 只要记录下迭代器，就不会自动迭代
+
+![40](40.jpg)
+
+两种遍历方式，一种是类似于Java的迭代方式，一种是forEach
 
 ### Iterator Index ###
 
+In the mongo shell, you can use the **toArray()** method to iterate the cursor and return the `documents` in an array, as in the following:
+
+```javascript
+var myCursor = db.inventory.find( { type: 2 } );
+var documentArray = myCursor.toArray();
+var myDocument = documentArray[3];
+```
+
+The **toArray()** method loads into **RAM** all `documents` returned by the cursor; the **toArray()** method exhausts the cursor.
+
+> 这个方法请适当使用
+>
+> 需要使用的情况包括：需要反复按照下标访问某一元素
+
+Additionally, some drivers provide access to the `documents` by using an index on the cursor (i.e. **cursor[index]**). This is a **shortcut** for first calling the **toArray()** method and then using an index on the resulting array.
+
+> **cursor[index]**这种看上去很方便的寻址方式代价并不小
+>
+> 不要被它简洁的语法骗了，更不要滥用这个方法
+>
+> 显然，对迭代器本身建立数组是一种更加节省的办法，为什么不采用这个作为默认实现？
+
+ ![41](41.jpg)
+
+感情把迭代器添加进数组的结果就是把`document`添加进数组啊
+
+那忽略我“以迭代器作为元素，建立数组”的想法
+
+那其他语言是否一样呢？
+
+The **myCursor[1]** is equivalent to the following example:
+
+```javascript
+myCursor.toArray() [1];
+```
+
 ### Cursor Behaviors ###
+
+#### Closure of Inactive Cursors ####
+
+By default, the server will automatically close the cursor after 10 minutes of inactivity, or if client has exhausted the cursor.
+
+> 默认地，服务器会自动回收过期的迭代器
+
+```javascript
+var myCursor = db.users.find().noCursorTimeout();
+```
+
+After setting the **noCursorTimeout** option, you must either close the cursor manually with **cursor.close()** or by exhausting the cursor’s results.
+
+> 如果服务器不自动回收超过一定时间不活跃的迭代器，你需要通过调用特定的方法或者是使得迭代器所指向的资源失效来回收迭代器
+
+#### Cursor Isolation ####
+
+As a cursor returns `documents`, other operations may interleave with the query. For the MMAPv1 storage engine, intervening write operations on a `document` may result in a cursor that returns a `document` more than once if that `document` has changed. To handle this situation, see the information on snapshot mode.
+
+> 我们知道，在查询完成之后返回一个迭代器
+>
+> 返回迭代器和取出某个特定的结果之间是有时间间隔的
+>
+> 这里面就会有写操作带来的冲突问题（因为返回的是迭代器而不是拷贝）
+>
+> 处理这个问题是极其复杂的，要了解引擎碰到这种情况的处理结果，也要尽量在应用程序这个层次上避免这种情况
+
+#### Cursor Batches ####
+
+The `MongoDB` server returns the query results in **batches**. The amount of data in the **batch** will not exceed the maximum `BSON` `document` size. To override the default size of the **batch**, see **batchSize()** and **limit()**.
+
+> 这个说的是对单个`document`有大小限制？
+>
+> 一般来所，设计良好的数据库不会发生这个问题
+>
+> 对于`JSON`数据库来说，不要反悔一颗很大的子树就可以了
+
+Operations of type **find()**, **aggregate()**, **listIndexes**, and **listCollections** return a maximum of 16 megabytes per batch. **batchSize()** can enforce a smaller limit, but not a larger one.
+
+> 还是相同的大小限制？看来16MB很合理嘛
+
+**find()** and **aggregate()** operations have an initial batch size of **101** `documents` by default. Subsequent **getMore** operations issued against the resulting cursor have no default batch size, so they are limited only by the 16 megabyte message size.
+
+> 你在逗我？返回的是迭代器为什么还有批次这个说法？
+
+For queries that include a sort operation without an index, the server must load **all** the `documents` in memory to perform the sort before returning any results.
+
+> 因为可能的排序操作？那这么说，只要排序用迭代器就毫无意义？反正数据都已经在内存里了？
+
+As you iterate through the cursor and reach the end of the returned batch, if there are more results, **cursor.next()** will perform a **getMore** operation to retrieve the next batch. To see how many `documents` remain in the batch as you iterate the cursor, you can use the **objsLeftInBatch()** method, as in the following example:
+
+> 总结一下，虽然用了迭代器，但是不知道什么原因，迭代器所指向的数据仍然是按照一定的批次大小返回的
+>
+> 这对用户来说没有什么影响，因为**cursor.next()**操作会自动加载更多的批次
+>
+> 最后，对于有排序需求的`document`，这个批次的作用就没有了，所有的数据一次载入内存
+>
+> 所以`collection`的大小很关键
+
+```javascript
+var myCursor = db.inventory.find();
+
+var myFirstDocument = myCursor.hasNext() ? myCursor.next() : null;
+
+myCursor.objsLeftInBatch();
+```
 
 ### Cursor Information ###
 
+The **db.serverStatus()** method returns a `document` that includes a **metrics** field. The **metrics** field contains a **metrics.cursor** field with the following information:
+
++ number of timed out cursors since the last server restart
++ number of open cursors with the option **DBQuery.Option.noTimeout** set to prevent timeout after a period of inactivity
++ number of “pinned” open cursors
++ total number of open cursors
+
+![42](42.jpg)
+
 # Update Documents #
+
+This page provides examples of how to update `documents` in using the following methods in the mongo shell:
+
++ db.collection.updateOne(\<filter>, \<update>, \<options>)
++ db.collection.updateMany(\<filter>, \<update>, \<options>)
++ db.collection.replaceOne(\<filter>, \<replacement>, \<options>)
+
+准备工作：
+
+![43](43.jpg)
+
+```javascript
+db.inventory.insertMany( [
+   { item: "canvas", qty: 100, size: { h: 28, w: 35.5, uom: "cm" }, status: "A" },
+   { item: "journal", qty: 25, size: { h: 14, w: 21, uom: "cm" }, status: "A" },
+   { item: "mat", qty: 85, size: { h: 27.9, w: 35.5, uom: "cm" }, status: "A" },
+   { item: "mousepad", qty: 25, size: { h: 19, w: 22.85, uom: "cm" }, status: "P" },
+   { item: "notebook", qty: 50, size: { h: 8.5, w: 11, uom: "in" }, status: "P" },
+   { item: "paper", qty: 100, size: { h: 8.5, w: 11, uom: "in" }, status: "D" },
+   { item: "planner", qty: 75, size: { h: 22.85, w: 30, uom: "cm" }, status: "D" },
+   { item: "postcard", qty: 45, size: { h: 10, w: 15.25, uom: "cm" }, status: "A" },
+   { item: "sketchbook", qty: 80, size: { h: 14, w: 21, uom: "cm" }, status: "A" },
+   { item: "sketch pad", qty: 95, size: { h: 22.85, w: 30.5, uom: "cm" }, status: "A" }
+]);
+```
+
+## Update Documents in a Collection ##
+
+To update a `document`, `MongoDB` provides **update operators**, such as **$set**, to modify field values.
+
+> 可以好好关注一下**update operators**
+
+To use the **update operators**, pass to the update methods an update `document` of the form:
+
+```javascript
+{
+  <update operator>: { <field1>: <value1>, ... },
+  <update operator>: { <field2>: <value2>, ... },
+  ...
+}
+```
+
+Some **update operators**, such as **$set**, will create the field if the field does not exist.
+
+> 有一些升级操作符，会导致原本不存在的域被创建
+
+能不能升级操作符嵌套升级操作符？或者针对不同的域采用不同的策略？
+
+### Update a Single Document ###
+
+![44](44.jpg)
+
+The update operation:
+
++ uses the **$set** operator to update the value of the **size.uom** field to "cm" and the value of the **status** field to "P",
++ uses the **\$currentDate** operator to update the value of the **lastModified** field to the current date. If **lastModified** field does not exist, **\$currentDate** will create the field. See **\$currentDate** for details.
+
+### Update Multiple Documents ###
+
+The following example uses the **db.collection.updateMany()** method on the **inventory** `collection` to update all `documents` where **qty** is less than 50:
+
+```javascript
+db.inventory.updateMany(
+   { "qty": { $lt: 50 } },
+   {
+     $set: { "size.uom": "in", status: "P" },
+     $currentDate: { lastModified: true }
+   }
+)
+```
+
+## Replace a Document ##
+
+To replace the **entire** content of a `document` **except** for the `_id` field, pass an entirely new `document` as the second argument to **db.collection.replaceOne()**.
+
+> relpace操作会替换整个`document`，除了**_id**域
+
+When replacing a `document`, the replacement `document` must consist of **only** field/value pairs.
+
+> 因为是替换操作，自然不存在升级方式的问题，所以不需要任何升级操作符
+
+The replacement `document` can have **different** fields from the original `document`. In the replacement `document`, you can omit the **_id** field since the **_id** field is immutable; however, if you do include the **_id** field, it must have the **same** value as the current value.
+
+> 替换操作当然允许不一样的域，这不是关系型数据库
+>
+> **_id**的不变性
+
+```javascript
+db.inventory.replaceOne(
+   { item: "paper" },
+   { item: "paper", instock: [ { warehouse: "A", qty: 60 }, { warehouse: "B", qty: 40 } ] }
+)
+```
 
 ## Update Methods ##
 
