@@ -1003,7 +1003,57 @@ db.inventory.replaceOne(
 )
 ```
 
+## Behavior ##
+
++ Atomicity
+
+  All write operations in `MongoDB` are atomic on the level of a single `document`. For more information on `MongoDB` and atomicity, see Atomicity and Transactions.
+
+  > `MongoDB`中的所有写操作在`document`层次上都是原子性的
+
++ **_id** Field
+
+  Once set, you cannot update the value of the **_id** field nor can you replace an existing `document` with a replacement `document` that has a different **_id** field value.
+
+  > 主键的特殊性之一：不能够被替换
+
++ `Document` Size
+
+  When performing update operations that increase the `document` size beyond the allocated space for that document, the update operation relocates the document on disk.
+
+  为了高性能，`MongoDB`在记录能够使用的空间上有限制
+
++ Field Order
+
+  `MongoDB` preserves the order of the `document` fields following write operations except for the following cases:
+
+  + The **_id** field is always the first field in the `document`.
+
+    > 主键特殊性之二：永远是第一位
+
+  + Updates that include **renaming** of field names may result in the reordering of fields in the `document`.
+
+    > 如果重命名某个域可能导致字段的重新排序
+
++ **Upsert** Option
+
+  If **updateOne()**, **updateMany()**, or **replaceOne()** includes **upsert : true** and **no** `documents` match the specified filter, then the operation **creates** a new `document` and **inserts** it. If there are matching `documents`, then the operation modifies or replaces the matching `document` or `documents`.
+
+  > 如果添加**upsert : true**选项，那么上述几个对象的行为就是：
+  >
+  > 找到则修改，找不到则插入
+
 ## Update Methods ##
+
+![45](45.jpg)
+
+The following methods can also update documents from a collection:
+
++ db.collection.findOneAndReplace()
++ db.collection.findOneAndUpdate()
++ db.collection.findAndModify()
++ db.collection.save()
++ db.collection.bulkWrite()
 
 # Delete Documents #
 
