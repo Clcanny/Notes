@@ -140,7 +140,7 @@ eureka:
   client:  # Not a client, don't register with yourself
     registerWithEureka: false
     fetchRegistry: false
-
+in
 server:
   port: 1111   # HTTP (Tomcat) port
 ```

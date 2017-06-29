@@ -1057,11 +1057,280 @@ The following methods can also update documents from a collection:
 
 # Delete Documents #
 
+This page provides examples of **delete** operations using the following methods in the mongo shell:
+
+> 先介绍一些待会会用到的两个方法
+
++ db.collection.deleteMany()
++ db.collection.deleteOne()
+
+照旧先上准备工作：
+
+```javascript
+db.inventory.insertMany( [
+   { item: "journal", qty: 25, size: { h: 14, w: 21, uom: "cm" }, status: "A" },
+   { item: "notebook", qty: 50, size: { h: 8.5, w: 11, uom: "in" }, status: "P" },
+   { item: "paper", qty: 100, size: { h: 8.5, w: 11, uom: "in" }, status: "D" },
+   { item: "planner", qty: 75, size: { h: 22.85, w: 30, uom: "cm" }, status: "D" },
+   { item: "postcard", qty: 45, size: { h: 10, w: 15.25, uom: "cm" }, status: "A" },
+]);
+```
+
+## Delete All Documents ##
+
+```javascript
+db.inventory.deleteMany({})
+```
+
+如果阅读了前面的文档，那么这句话应该不难理解
+
+The method returns a `document` with the **status** of the operation.
+
+> 返回一个带有操作状态的`document`
+
+## Delete All Documents that Match a Condition ##
+
+You can specify criteria, or filters, that identify the `documents` to delete. The filters use the same syntax as read operations.
+
+```javascript
+{ <field1>: { <operator1>: <value1> }, ... }
+```
+
+> 我只想说，删除操作里的条件`document`和读写操作里的条件`document`是一样的
+
+```javascript
+db.inventory.deleteMany({ status : "A" })
+```
+
+删除所有的状态为A的`docuement`
+
+## Remove Only One Document that Matches a Condition ##
+
+To delete **at most** a single `document` that matches a specified filter (even though multiple `documents` may match the specified filter) use the **db.collection.deleteOne()** method.
+
+> 这真的没有什么好说的，利用前面的指示都可以推导出来
+>
+> Find/Update/Remove + Many/One
+>
+> 从两个维度去理解6种方法，再加上一些零零散散的诸如Replace之类的方法
+>
+> 对基本的CRUD操作就有基本的认知
+
+## Delete Behavior ##
+
++ Indexes
+
+  Delete operations do not drop indexes, even if deleting all `documents` from a collection.
+
+  > 没看懂，囧（😳）
+  >
+  > 该详细的只有一句话，哎……
+
++ Atomicity
+
+  原文我都不想放了，也不想翻译了……
+
 ## Delete Methods ##
+
+![46](46.jpg)
+
+The following methods can also delete documents from a collection:
+
++ db.collection.findOneAndDelete()
+
+  findOneAndDelete() provides a sort option. The option allows for the deletion of the first `document` sorted by the specified order.
+
+  > 支持排序是亮点
+
++ db.collection.findAndModify()
+
+  db.collection.findAndModify() provides a sort option. The option allows for the deletion of the first `document `sorted by the specified order.
+
++ db.collection.bulkWrite()
 
 # Bulk Write Operations #
 
+在正式地看文档和翻译文档之前，我还是要大吼一声：批操作具备原子性吗？
+
+## Overview ##
+
+`MongoDB` provides clients the ability to perform write operations in **bulk**. Bulk write operations affect a **single** `collection`. 
+
+> 一个对使用者不太好的消息：bulk write operations是针对一个`collection`的
+
+`MongoDB` allows applications to determine **the acceptable level of acknowledgement** required for bulk write operations.
+
+> 接下来重点理解什么是**the acceptable level of acknowledgement**？
+
+The **db.collection.bulkWrite()** method provides the ability to perform bulk **insert**, **update**, and **remove** operations.
+
+> 虽然这个方法的名字里带write，但是不仅仅支持写，还支持增／改
+
+`MongoDB` also supports bulk insert through the **db.collection.insertMany()**.
+
+> insert操作具有一个update/delete操作不具备的性质：它不需要指定条件`document`
+>
+> 所以，你可以认为**insertMany**方法是一种批量操作
+>
+> 但是，相应的**updateMany**/**deleteMany**却不是批量操作，虽然它们的方法名中带有**Many**
+
+## Ordered vs Unordered Operations ##
+
+Bulk write operations can be either **ordered** or **unordered**.
+
+> 应该无序写入会快一点？
+>
+> 有序写入对于批操作来说是非常重要的，Firebase默认支持有序写入
+
+With an ordered list of operations, `MongoDB` executes the operations serially. 
+
+> 有序写入自然是序列式执行
+
+If an error occurs during the processing of one of the write operations, `MongoDB` will return without processing any **remaining** write operations in the list.
+
+> 如果中间某一个操作导致了错误，整个批操作立即停止并且返回
+>
+> 是不是会返回一个整型数告诉客户端处理到第几个操作时遇到了问题？
+
+With an unordered list of operations, `MongoDB` can execute the operations in parallel, but this behavior is not guaranteed.
+
+> 果然无序的批操作处理起来会快一点，都并行了难道不会快？
+
+If an error occurs during the processing of one of the write operations, `MongoDB` will continue to process remaining write operations in the list.
+
+> 如果出错，会继续执行
+>
+> 是不是用一个数组或者列表告诉用户哪些操作失败了？
+
+Executing an ordered list of operations on a sharded collection will generally be slower than executing an unordered list since with an ordered list, each operation must wait for the previous operation to finish.
+
+> 废话，序列总是比并发慢
+
+By default, **bulkWrite()** performs **ordered** operations. To specify unordered write operations, set **ordered : false** in the options document.
+
+> 默认是有序，可以设置成无序
+
+## bulkWrite() Methods ##
+
+**bulkWrite()** supports the following write operations:
+
++ insertOne
+
+  insertMany不在此列的原因很明显，它本身就是批操作
+
++ updateOne
+
++ updateMany
+
++ replaceOne
+
++ deleteOne
+
++ deleteMany
+
+Each write operation is passed to **bulkWrite()** as a `document` in an array.
+
+每一个被支持的操作（这里不说写操作，写操作在本语境下有两重意思：改变`collection`的操作／插入操作），都用`document`的形式传给**bulkWrite()**方法
+
+For example, the following performs multiple write operations:
+
+![47](47.jpg)
+
+![48](48.jpg)
+
+![49](49.jpg)
+
+关键代码如下：
+
+```javascript
+try {
+   db.characters.bulkWrite(
+      [
+         { insertOne :
+            {
+               "document" :
+               {
+                  "_id" : 4, "char" : "Dithras", "class" : "barbarian", "lvl" : 4
+               }
+            }
+         },
+         { insertOne :
+            {
+               "document" :
+               {
+                  "_id" : 5, "char" : "Taeln", "class" : "fighter", "lvl" : 3
+               }
+            }
+         },
+         { updateOne :
+            {
+               "filter" : { "char" : "Eldon" },
+               "update" : { $set : { "status" : "Critical Injury" } }
+            }
+         },
+         { deleteOne :
+            { "filter" : { "char" : "Brisbane"} }
+         },
+         { replaceOne :
+            {
+               "filter" : { "char" : "Meldane" },
+               "replacement" : { "char" : "Tanys", "class" : "oracle", "lvl" : 4 }
+            }
+         }
+      ]
+   );
+}
+catch (e) {
+   print(e);
+}
+```
+
+为了弄懂**bulkWrite**的用法，我写了一些等价的示例：
+
+![50](50.jpg)
+
+站在API设计者的角度上来说，**bulkWrite**的用法是很简单的：
+
+1. **bulkWrite**设计的目的是组合各种操作，所以会沿用**updateOne**等方法
+2. 为了辨识这些操作，用它们的名字作为key最好不过
+3. 那么参数怎么办呢？有两种选择：数组（按照原本的顺序）／集合（添加上该参数的名字）
+4. `MongoDB`选择用集合，好处是可以打乱顺序，坏处是`MongoDB`本身的API少见按名传参，都是按顺序传参，造成不统一
+
+## Strategies for Bulk Inserts to a Sharded Collection ##
+
+Large bulk insert operations, including initial data inserts or routine data import, can affect **sharded cluster** performance.
+
+> 大的批操作会影响共享集群的性能，所以需要额外做一些处理
+>
+> 我很好奇在这里共享集群的定义是什么
+
+For bulk inserts, consider the following strategies:
+
+### Pre-Split the Collection ###
+
+If the sharded `collection` is empty, then the `collection` has only one initial chunk, which resides on a single shard. `MongoDB` must then take time to receive data, create splits, and distribute the split chunks to the available shards. To avoid this performance cost, you can pre-split the `collection`, as described in Split Chunks in a Sharded Cluster.
+
+> 这部分的内容都等到了解什么是共享集群之后再说
+>
+> `MongoDB`声称自己天生支持水平向扩展，和这个共享集群有关系吗？
+
+### Unordered Writes to mongos ###
+
+### Avoid Monotonic Throttling ###
+
 # SQL to MongoDB Mapping Chart #
+
+这一节内容是为熟悉关系型数据库的用户准备的，告诉你关系型数据库的那些东西可以直接对应到`MongoDB`
+
+但对我来说，就显得有些鸡肋
+
+## Terminology and Concepts ##
+
+## Executables ##
+
+## Examples ##
+
+## Additional Resources ##
 
 # Read Concern #
 
