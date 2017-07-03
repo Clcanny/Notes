@@ -1316,6 +1316,16 @@ If the sharded `collection` is empty, then the `collection` has only one initial
 
 ### Unordered Writes to mongos ###
 
+To improve write performance to sharded clusters, use **bulkWrite()** with the optional parameter **ordered** set to **false**.
+
+> 如果使用共享集群，不需要保证顺序的话，并行写入会有非常明显的优势
+
+mongos can attempt to send the writes to multiple shards simultaneously. 
+
+For empty `collections`, first pre-split the collection as described in **Split Chunks** in a Sharded Cluster.
+
+> 这种预拆分策略到底是什么样的？？
+
 ### Avoid Monotonic Throttling ###
 
 # SQL to MongoDB Mapping Chart #
@@ -1326,13 +1336,71 @@ If the sharded `collection` is empty, then the `collection` has only one initial
 
 ## Terminology and Concepts ##
 
+![51](51.jpg)
+
+我一直很好奇什么是aggregation？
+
 ## Executables ##
 
+![52](52.jpg)
+
+可以看到数据库都是采用客户端服务器的架构
+
 ## Examples ##
+
+需要的话自己查阅原文档，没有什么特别的东西
 
 ## Additional Resources ##
 
 # Read Concern #
+
+The **readConcern** query option for **replica sets** and **replica set shards** determines which data to return from a query.
+
+说实话，我没有弄懂什么是Read Concern，所以我去翻了翻国内的博客
+
+**readConcern**是用于帮助用户指定读策略的
+
+**readConcern**的初衷是解决脏读的问题，比如用户从primary上读取了某条数据，但这条数据并没有同步到大多数节点，然后primary被判定为出故障，接着进行回滚，那么用户就读取了脏数据
+
+当我们吧**readConcern**级别设置为**majority**的时候，能够保证用户读取到的数据都已经写入到了大多数的节点，从而保证数据不会遭遇回滚，那么用户就不会读取到脏数据
+
+需要注意的是，**readConcern**的**majority**级别能保证不读取脏数据，但不能保证读取最新数据
+
+## Read Concern Levels ##
+
++ local
+
+  Default. The query returns the instance’s most recent data. Provides no guarantee that the data has been written to a majority of the replica set members (i.e. may be rolled back).
+
+  > 设施默认策略，从某一个数据节点上读取最近的数据，不一定保证用户读取到的数据不会遭遇回滚
+
++ majority
+
+  The query returns the instance’s most recent data acknowledged as having been written to a majority of members in the replica set.
+
+  > 保证读取到的数据已经同步到多个数据节点上
+
+  + you must start the mongod instances with the **—enableMajorityReadConcern** command line option (or the **replication.enableMajorityReadConcern** set to true if using a configuration file).
+
+    > 如果要使用这个读取策略，在启动数据库的时候需要加上一个选项
+
+  + replica sets must use **WiredTiger** storage engine and election protocol version 1.
+
+    > 对存储引擎还有限制
+
++ linearizable
+
+## Storage Engine and Drivers Support ##
+
+![53](53.jpg)
+
+## readConcern Option ##
+
+```javascript
+readConcern: { level: <"majority"|"local"|"linearizable"> }
+```
+
+## Considerations ##
 
 # Write Concern #
 
