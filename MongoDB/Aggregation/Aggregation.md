@@ -139,3 +139,196 @@ When returning the results of a map reduce operation inline, the result `documen
 Views do not support map-reduce operations.
 
 > 视图不支持map-reduce操作
+
+## Do it ##
+
+![5](5.jpg)
+
+![6](6.jpg)
+
+猜猜结果到哪里去了？
+
+![7](7.jpg)
+
+到这里还没有结束，可以看到结果只出现了200，而没有出现期望中的1+2，再试试看：
+
+正确的做法是多次调用emit函数，而不是在一次emit函数调用中尝试发送多个key-value对
+
+![8](8.jpg)
+
+但这个例子还有一个不符合期待的地方，value1还是没有输出1+2=3，而是输出了NaN
+
+![9](9.jpg)
+
+原来是字段名看错了，而且结果也不是1+2，而是1+1=2
+
+![10](10.jpg)
+
+如你所见，finalize不支持副作用，它的正确用法是改变reducedValue并返回
+
+![11](11.jpg)
+
+这才是正确的用法
+
+## Map-Reduce and Sharded Collections ##
+
+在这里首先要弄清楚什么是数据库切分（sharing）
+
+ Sharding的基本思想就要把一个数据库切分成多个部分放到不同的数据库(server)上，从而缓解单一数据库的性能问题。不太严格的讲，对于海量数据的数据库，如果是因为表多而数据多，这时候适合使用垂直切分，即把关系紧密（比如同一模块）的表切分出来放在一个server上。如果表并不多，但每张表的数据非常多，这时候适合水平切分，即把表的数据按某种规则（比如按ID散列）切分到多个数据库(server)上。当然，现实中更多是这两种情况混杂在一起，这时候需要根据实际情况做出选择，也可能会综合使用垂直与水平切分，从而将原有数据库切分成类似矩阵一样可以无限扩充的数据库(server)阵列。下面分别详细地介绍一下垂直切分和水平切分：
+
++ 垂直切分的最大特点就是规则简单，实施也更为方便，尤其适合各业务之间的耦合度非常低，相互影响很小，业务逻辑非常清晰的系统。在这种系统中，可以很容易做到将不同业务模块所使用的表分拆到不同的数据库中。根据不同的表来进行拆分，对应用程序的影响也更小，拆分规则也会比较简单清晰。
+
+  ![12](12.jpg)
+
++ 水平切分于垂直切分相比，相对来说稍微复杂一些。因为要将同一个表中的不同数据拆分到不同的数据库中，对于应用程序来说，拆分规则本身就较根据表名来拆分更为复杂，后期的数据维护也会更为复杂一些。
+
+  ![13](13.jpg)
+
+让我们从普遍的情况来考虑数据的切分：一方面，一个库的所有表通常不可能由某一张表全部串联起来，这句话暗含的意思是，水平切分几乎都是针对一小搓一小搓（实际上就是垂直切分出来的块）关系紧密的表进行的，而不可能是针对所有表进行的。另一方面，一些负载非常高的系统，即使仅仅只是单个表都无法通过单台数据库主机来承担其负载，这意味着单单是垂直切分也不能完全解决问明。因此多数系统会将垂直切分和水平切分联合使用，先对系统做垂直切分，再针对每一小搓表的情况选择性地做水平切分，从而将整个数据库切分成一个分布式矩阵。
+
+![14](14.jpg)
+
+对于map-reduce来说，它的输入可能来自多个切分过的数据库，它的输出也可能去往多个切分过的数据库
+
+Map-reduce supports operations on sharded `collections`, both as an input and as an output. This section describes the behaviors of mapReduce specific to sharded `collections`.
+
+### Sharded Collection as Input ###
+
+When using sharded collection as the input for a map-reduce operation, mongos will automatically dispatch the map-reduce job to each shard in parallel. There is no special option required. mongos will wait for jobs on all shards to finish.
+
+> 当你使用切分的表作为输入的时候，mongos会自动把任务派发给这些表，然后回收它们的处理结果
+>
+> 但是你要告诉我怎么把多个表作为输入啊！！！要不然我怎么实验！！
+
+### Sharded Collection as Output ###
+
+If the **out** field for mapReduce has the sharded value, `MongoDB` shards the output collection using the **_id** field as the shard key.
+
+> 自动用**_id**哈希？有意思，水平切分
+
+To output to a sharded collection:
+
++ If the output `collection` does not exist, `MongoDB` creates and shards the `collection` on the _id field.
+
++ For a new or an empty sharded `collection`, `MongoDB` uses the results of the first stage of the map-reduce operation to create the **initial chunks** distributed among the shards.
+
+  > 为什么第一阶段的结果就拿出来存储？
+
++ mongos dispatches, in parallel, a map-reduce post-processing job to every shard that owns a chunk. During the post-processing, each shard will pull the results for its own chunks from the other shards, run the final reduce/finalize, and write locally to the output collection.
+
+  > 这个想法非常机智，把第一阶段的结果分别存储于不同的表之中（一般来说这些表是放在不同的机器上的），然后给每个机器派发任务，并行执行以提高效率
+  >
+  > 最后每个表都收集一下其他表的结果，写回到本地（这个本地就是自己这张表）
+
+## Map Reduce Concurrency ##
+
+The map-reduce operation is composed of many tasks, including reads from the input `collection`, executions of the map function, executions of the reduce function, writes to a temporary `collection` during processing, and writes to the output `collection`.
+
+> 注意到`MongoDB`用一个temporary表存储第一阶段的结果
+
+During the operation, map-reduce takes the following locks:
+
+> 我们都知道，并行都需要锁区保证关键点的先后顺序
+
++ The read phase takes a read lock. It yields every 100 `documents`.
++ The insert into the temporary `collection` takes a write lock for a single write.
++ If the output `collection` does not exist, the creation of the output `collection` takes a write lock.
++ If the output `collection` exists, then the output actions (i.e. merge, replace, reduce) take a write lock. This write lock is global, and blocks all operations on the mongod instance.
+
+The final write lock during post-processing makes the results appear atomically. However, output actions **merge** and **reduce** may take minutes to process. For the merge and reduce, the **nonAtomic** flag is available, which releases the lock between writing each output `document`. See the **db.collection.mapReduce()** reference for more information.
+
+> 最后一个锁是全局的，它的存在是为了保证写入的原子性
+>
+> 不过有些任务耗时太长，可以适当折中，即保证每个`document`的原子性而放弃整个结果的原子性
+>
+> 以获得在`documents`写入间隔获得写入其它数据的机会
+
+## Perform Incremental Map-Reduce ##
+
+这一小节要解决的问题是：如果做完一次map-reduce，又来了新的数据怎么办？总不至于把整张表的数据都从新算一遍吧？
+
+类似于增量学习
+
+解决两个问题：
+
++ 如何识别新来的数据，或者说，怎么知道上次处理过这个数据？
++ 是否需要融合旧的结果和新的结果？如果需要，怎么融合？
+
+![15](15.jpg)
+
+```javascript
+var mapFunction = function() {
+                      var key = this.userid;
+                      var value = {
+                                    userid: this.userid,
+                                    total_time: this.length,
+                                    count: 1,
+                                    avg_time: 0
+                                   };
+
+                      emit( key, value );
+                  };
+```
+
+```javascript
+var reduceFunction = function(key, values) {
+
+                        var reducedObject = {
+                                              userid: key,
+                                              total_time: 0,
+                                              count:0,
+                                              avg_time:0
+                                            };
+
+                        values.forEach( function(value) {
+                                              reducedObject.total_time += value.total_time;
+                                              reducedObject.count += value.count;
+                                        }
+                                      );
+                        return reducedObject;
+                     };
+```
+
+```javascript
+var finalizeFunction = function (key, reducedValue) {
+
+                          if (reducedValue.count > 0)
+                              reducedValue.avg_time = reducedValue.total_time / reducedValue.count;
+
+                          return reducedValue;
+                       };
+```
+
+```javascript
+db.sessions.mapReduce( mapFunction,
+                       reduceFunction,
+                       {
+                         out: "session_stat",
+                         finalize: finalizeFunction
+                       }
+                     )
+```
+
+![16](16.jpg)
+
+新数据来了：
+
+![17](17.jpg)
+
+```javascript
+db.sessions.mapReduce( mapFunction,
+                       reduceFunction,
+                       {
+                         query: { ts: { $gt: ISODate('2011-11-05 00:00:00') } },
+                         out: { reduce: "session_stat" },
+                         finalize: finalizeFunction
+                       }
+                     );
+```
+
+![18](18.jpg)
+
+> 注意out属性中的reduce关键字
+
+## Troubleshoot the Map Function ##
+
