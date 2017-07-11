@@ -142,3 +142,27 @@ bin/elasticsearch
 # 进入容器获得超级权限
 docker exec -u 0 -it mycontainer bash
 ```
+
+
+
+用户名：elastic
+
+密码：changeme
+
+```yml
+cluster.name: "docker-cluster"
+network.host: 0.0.0.0
+
+# minimum_master_nodes need to be explicitly set when bound on a public IP
+# set to 1 to allow single node clusters
+# Details: https://github.com/elastic/elasticsearch/pull/17288
+discovery.zen.minimum_master_nodes: 1
+
+xpack.security.enabled: false
+```
+
+```shell
+docker cp elasticsearch.yml search:/usr/share/elasticsearch/config/elasticsearch.yml
+```
+
+用于在开发时把验证关掉
