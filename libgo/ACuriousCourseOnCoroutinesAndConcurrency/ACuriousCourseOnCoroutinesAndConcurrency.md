@@ -497,3 +497,447 @@ class Task(object):
   + Tasks do not see other tasks.
   + yield is the only external interface.
 
+
+### Task Management ###
+
+```python
+# Create a new task
+class NewTask(SystemCall):
+    def __init__(self,target):
+        self.target = target
+    def handle(self):
+        tid = self.sched.new(self.target)
+        self.task.sendval = tid
+        self.sched.schedule(self.task)
+
+# Kill a task
+class KillTask(SystemCall):
+    def __init__(self,tid):
+        self.tid = tid
+    def handle(self):
+        task = self.sched.taskmap.get(self.tid,None)
+        if task:
+            task.target.close() 
+            self.task.sendval = True
+        else:
+            self.task.sendval = False
+        self.sched.schedule(self.task)
+```
+
+```python
+# ------------------------------------------------------------
+# pyos6.py  -  The Python Operating System
+#
+# Added support for task waiting
+# ------------------------------------------------------------
+
+# ------------------------------------------------------------
+#                       === Tasks ===
+# ------------------------------------------------------------
+class Task(object):
+    taskid = 0
+    def __init__(self,target):
+        Task.taskid += 1
+        self.tid     = Task.taskid   # Task ID
+        self.target  = target        # Target coroutine
+        self.sendval = None          # Value to send
+
+    # Run a task until it hits the next yield statement
+    def run(self):
+        return self.target.send(self.sendval)
+
+# ------------------------------------------------------------
+#                      === Scheduler ===
+# ------------------------------------------------------------
+from Queue import Queue
+
+class Scheduler(object):
+    def __init__(self):
+        self.ready   = Queue()   
+        self.taskmap = {}        
+
+        # Tasks waiting for other tasks to exit
+        self.exit_waiting = {}
+
+    def new(self,target):
+        newtask = Task(target)
+        self.taskmap[newtask.tid] = newtask
+        self.schedule(newtask)
+        return newtask.tid
+
+    def exit(self,task):
+        print "Task %d terminated" % task.tid
+        del self.taskmap[task.tid]
+        # Notify other tasks waiting for exit
+        for task in self.exit_waiting.pop(task.tid,[]):
+            self.schedule(task)
+
+    def waitforexit(self,task,waittid):
+        if waittid in self.taskmap:
+            self.exit_waiting.setdefault(waittid,[]).append(task)
+            return True
+        else:
+            return False
+
+    def schedule(self,task):
+        self.ready.put(task)
+
+    def mainloop(self):
+         while self.taskmap:
+            task = self.ready.get()
+            try:
+                result = task.run()
+                if isinstance(result,SystemCall):
+                    result.task  = task
+                    result.sched = self
+                    result.handle()
+                    continue
+            except StopIteration:
+                self.exit(task)
+                continue
+            self.schedule(task)
+
+# ------------------------------------------------------------
+#                   === System Calls ===
+# ------------------------------------------------------------
+
+class SystemCall(object):
+    def handle(self):
+        pass
+
+# Return a task's ID number
+class GetTid(SystemCall):
+    def handle(self):
+        self.task.sendval = self.task.tid
+        self.sched.schedule(self.task)
+
+# Create a new task
+class NewTask(SystemCall):
+    def __init__(self,target):
+        self.target = target
+    def handle(self):
+        tid = self.sched.new(self.target)
+        self.task.sendval = tid
+        self.sched.schedule(self.task)
+
+# Kill a task
+class KillTask(SystemCall):
+    def __init__(self,tid):
+        self.tid = tid
+    def handle(self):
+        task = self.sched.taskmap.get(self.tid,None)
+        if task:
+            task.target.close() 
+            self.task.sendval = True
+        else:
+            self.task.sendval = False
+        self.sched.schedule(self.task)
+
+# Wait for a task to exit
+class WaitTask(SystemCall):
+    def __init__(self,tid):
+        self.tid = tid
+    def handle(self):
+        result = self.sched.waitforexit(self.task,self.tid)
+        self.task.sendval = result
+        # If waiting for a non-existent task,
+        # return immediately without waiting
+        if not result:
+            self.sched.schedule(self.task)
+
+# ------------------------------------------------------------
+#                      === Example ===
+# ------------------------------------------------------------
+if __name__ == '__main__':
+    def foo():
+        for i in xrange(5):
+            print "I'm foo"
+            yield
+
+    def main():
+        child = yield NewTask(foo())
+        print "Waiting for child"
+        yield WaitTask(child)
+        print "Child done"
+
+    sched = Scheduler()
+    sched.new(main())
+    sched.mainloop()
+```
+
+### An Echo Server Attempt ###
+
+直接在协程中使用阻塞型IO会导致整个线程挂起，我们不希望看到这样的事情发生
+
+所以把阻塞性IO变成协程的系统调用，交由调度器来管理
+
+说明：`select.select`是python监测文件描述符的方法（好像是阻塞型的）
+
+```python
+# ------------------------------------------------------------
+# pyos.py  -  The Python Operating System
+#
+# I/O Waiting Support added
+# ------------------------------------------------------------
+
+# ------------------------------------------------------------
+#                       === Tasks ===
+# ------------------------------------------------------------
+class Task(object):
+    taskid = 0
+    def __init__(self, target):
+        Task.taskid += 1
+        self.tid     = Task.taskid   # Task ID
+        self.target  = target        # Target coroutine
+        self.sendval = None          # Value to send
+
+    # Run a task until it hits the next yield statement
+    def run(self):
+        return self.target.send(self.sendval)
+
+# ------------------------------------------------------------
+#                      === Scheduler ===
+# ------------------------------------------------------------
+from Queue import Queue
+import select
+
+class Scheduler(object):
+    def __init__(self):
+        self.ready   = Queue()   
+        self.taskmap = {}        
+
+        # Tasks waiting for other tasks to exit
+        self.exit_waiting = {}
+
+        # I/O waiting
+        self.read_waiting = {}
+        self.write_waiting = {}
+        
+    def new(self, target):
+        newtask = Task(target)
+        self.taskmap[newtask.tid] = newtask
+        self.schedule(newtask)
+        return newtask.tid
+
+    def exit(self, task):
+        print "Task %d terminated" % task.tid
+        del self.taskmap[task.tid]
+        # Notify other tasks waiting for exit
+        for task in self.exit_waiting.pop(task.tid, []):
+            self.schedule(task)
+
+    def waitforexit(self, task, waittid):
+        if waittid in self.taskmap:
+            self.exit_waiting.setdefault(waittid, []).append(task)
+            return True
+        else:
+            return False
+
+    # I/O waiting
+    def waitforread(self, task, fd):
+        self.read_waiting[fd] = task
+
+    def waitforwrite(self, task, fd):
+        self.write_waiting[fd] = task
+
+    def iopoll(self, timeout):
+        if self.read_waiting or self.write_waiting:
+           r, w, e = select.select(self.read_waiting,
+                                   self.write_waiting, [], timeout)
+           for fd in r: self.schedule(self.read_waiting.pop(fd))
+           for fd in w: self.schedule(self.write_waiting.pop(fd))
+
+    def iotask(self):
+        while True:
+            if self.ready.empty():
+                self.iopoll(None)
+            else:
+                self.iopoll(0)
+            yield
+
+    def schedule(self, task):
+        self.ready.put(task)
+
+    def mainloop(self):
+         self.new(self.iotask())
+         while self.taskmap:
+             task = self.ready.get()
+             try:
+                 result = task.run()
+                 if isinstance(result, SystemCall):
+                     result.task  = task
+                     result.sched = self
+                     result.handle()
+                     continue
+             except StopIteration:
+                 self.exit(task)
+                 continue
+             self.schedule(task)
+
+# ------------------------------------------------------------
+#                   === System Calls ===
+# ------------------------------------------------------------
+
+class SystemCall(object):
+    def handle(self):
+        pass
+
+# Return a task's ID number
+class GetTid(SystemCall):
+    def handle(self):
+        self.task.sendval = self.task.tid
+        self.sched.schedule(self.task)
+
+# Create a new task
+class NewTask(SystemCall):
+    def __init__(self, target):
+        self.target = target
+    def handle(self):
+        tid = self.sched.new(self.target)
+        self.task.sendval = tid
+        self.sched.schedule(self.task)
+
+# Kill a task
+class KillTask(SystemCall):
+    def __init__(self, tid):
+        self.tid = tid
+    def handle(self):
+        task = self.sched.taskmap.get(self.tid, None)
+        if task:
+            task.target.close() 
+            self.task.sendval = True
+        else:
+            self.task.sendval = False
+        self.sched.schedule(self.task)
+
+# Wait for a task to exit
+class WaitTask(SystemCall):
+    def __init__(self, tid):
+        self.tid = tid
+    def handle(self):
+        result = self.sched.waitforexit(self.task, self.tid)
+        self.task.sendval = result
+        # If waiting for a non-existent task,
+        # return immediately without waiting
+        if not result:
+            self.sched.schedule(self.task)
+
+# Wait for reading
+class ReadWait(SystemCall):
+    def __init__(self, f):
+        self.f = f
+    def handle(self):
+        fd = self.f.fileno()
+        self.sched.waitforread(self.task, fd)
+
+# Wait for writing
+class WriteWait(SystemCall):
+    def __init__(self, f):
+        self.f = f
+    def handle(self):
+        fd = self.f.fileno()
+        self.sched.waitforwrite(self.task, fd)
+
+# ------------------------------------------------------------
+#                      === Example ===
+# ------------------------------------------------------------
+
+from socket import socket, AF_INET, SOCK_STREAM
+
+def handle_client(client, addr):
+    print "Connection from",  addr
+    while True:
+        data = client.recv(65536)
+        if not data:
+            break
+        client.send(data)
+    client.close()
+    print "Client closed"
+    yield           # Make the function a generator/coroutine
+
+def server(port):
+    print "Server starting"
+    sock = socket(AF_INET, SOCK_STREAM)
+    sock.bind(("", port))
+    sock.listen(5)
+    while True:
+        client, addr = sock.accept()
+        yield NewTask(handle_client(client, addr))
+
+def alive():
+        while True:
+            print "I'm alive!"
+            yield
+
+sched = Scheduler()
+sched.new(alive())
+sched.new(server(45000))
+sched.mainloop()
+```
+
+## The Problem with the Stack ##
+
+不能在子例程（子函数）中使用`yield`关键字
+
+![16](16.png)
+
+This limitation is one of the things that is addressed by Stackless Python.
+
+>这个限制是因为`Python`的无栈化导致的
+
+还是有办法解决这个问题的，不过会引入新的问题——trampolining
+
+```python
+# A subroutine
+def add(x, y):
+  yield x + y
+
+# A function that calls a subroutines
+def main():
+  r = yield add(2, 2)
+  print r
+  yield
+  
+def run():
+  m = main()
+  # An example of a "trampoline"
+  sub = m.send(None)
+  result = sub.send(None)
+  m.send(result)
+```
+
+控制流如下：
+
+![17](17.png)
+
+本质上是因为`python`无栈，所以一切都需要调度器自己解决
+
+更泛化一点，我们做一个通用的调用栈
+
+![18](18.png)
+
+![19](19.png)
+
+![20](20.png)
+
+![21](21.png)
+
+![22](22.png)
+
+![23](23.png)
+
+即使我们做出一个更加通用的栈，对逻辑代码也是具有侵入性的（调用的时候使用一次`yield`，返回的时候使用一次`yield`）（第一次看的时候很奇怪）
+
+不过除了这一点以外，其它的方面已经好很多了（以网络IO举例，`select.select`只是检查标识位，它本身不是阻塞式的），看下图的对比：
+
+![24](24.png)
+
+逻辑代码还是连在一起的，虽然多了三个奇怪的`yield`（对比回调式写法）
+
+## 总结（来自Demons） ##
+
+1. `Python`的`yield`实际上提供CPS转换的能力（存疑，下一篇笔记会探讨）
+2. 编写一个调度器
+3. 使得调度器支持“系统调用”（不经过操作系统层面）
+4. 使得调度器支持真正的系统调用（一般而言，推荐异步系统调用）
+5. 做一个通用的“函数栈”
