@@ -941,3 +941,58 @@ def run():
 3. 使得调度器支持“系统调用”（不经过操作系统层面）
 4. 使得调度器支持真正的系统调用（一般而言，推荐异步系统调用）
 5. 做一个通用的“函数栈”
+
+对于`yield`关键字再多说一点自己的体会，以以下代码为例：
+
+```python
+# A subroutine
+def add(x, y):
+  yield x + y
+
+# A function that calls a subroutines
+def main():
+  r = yield add(2, 2)
+  print r
+  yield
+  
+def run():
+  m = main()
+  # An example of a "trampoline"
+  sub = m.send(None)
+  result = sub.send(None)
+  m.send(result)
+```
+
+做人肉CPS转换（是否是CPS转换还存疑）：
+
+```python
+def add(x, y):
+  # 返回一个函数
+  # 函数的类型是()->Int
+  # 采用Haskell的记法
+  return function(() -> x + y)
+
+def main():
+  # return function(() -> add(2, 2))
+  # add(2, 2)的结果是
+  # function(() -> 4)
+  return function(() -> function(() -> 4))
+  r = 外界传入的一个值
+  print r
+  return function(() -> ())
+
+def run():
+  m = main()
+  # m = function(() -> function(() -> 4))
+  sub = m.send(None)
+  # sub = function(() -> function(() -> 4))() = function(() -> 4))
+  result = sub.send(None)
+  # result = function(() -> 4)() = 4
+  m.send(4)
+  # 控制权回到main函数，打印4
+  # 然后main函数挂起自己
+```
+
+如果你使用的语言不支持全文CPS变换，可以人肉CPS变换（然后你就可以使用协程）
+
+人肉CPS变换可以帮助你看清楚控制权的转移
