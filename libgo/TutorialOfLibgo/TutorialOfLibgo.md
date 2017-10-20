@@ -459,3 +459,315 @@ g++ -std=c++11 -g -Wall sample7_timer.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -ll
 
 即提供了自己的“系统调用”，又修改了原生的系统调用在协程内的效果，很厉害
 
+![24](24.png)
+
+上面显示了如何使用co_timer（添加以及取消）
+
+因为协程不具备主动切换的能力，可以想像协程的计时器不是特别准确
+
+![25](25.png)
+
+计时器的使用
+
+![26](26.png)
+
+操作系统提供的原生调用的效果被修改了，不会导致整个线程被挂起
+
+![27](27.jpg)
+
+`RunUntilNoTask`和`while` + `Run`具有相同的效果
+
+特别地，`RunUntilNoTask`会等到所有沉睡的协程醒来并执行完才退出
+
+#### 协程计时器准不准？ ####
+
+![28](28.jpg)
+
+猜猜看结果是什么？
+
+![29](29.jpg)
+
+协程计时器是不准的（线程计时器还蛮准的是因为线程是可以通过外中断打断的，外中断可以由硬件计时器发出）
+
+### sample8_multithread ###
+
+#### 编译 ####
+
+```shell
+cp libgo/tutorial/sample8_multithread.cpp .
+g++ -std=c++11 -g -Wall sample8_multithread.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibgo_main -llibgo -lboost_coroutine -lboost_context -lboost_system -lboost_thread -ldl -pthread -static -static-libgcc -static-libstdc++
+```
+
+#### 运行结果 ####
+
+![30](30.jpg)
+
+#### 代码解读 ####
+
+![31](31.jpg)
+
+其中`foo`是一个非常耗时的函数
+
+![32](32.jpg)
+
+虽然说第二个好像快了很多，但我感觉是多线程的功劳而不是协程的功劳
+
+（两倍的时间关系：该主机刚好是2核CPU）
+
+#### 是不是协程的功劳 ####
+
+![33](33.jpg)
+
+![34](34.jpg)
+
+可以看到，只有一个线程执行的时候还没有for-loop快呢（协程切换调度的开销）
+
+而且因为只有两个物理线程，开更多的线程反而更慢（线程切换的开销）
+
+我比较关心协程内能否创建线程来执行任务？
+
+#### 协程内创建线程 ####
+
+![35](35.jpg)
+
+![36](36.jpg)
+
+不过看来等待线程结束之类的操作并没有导致协程切换
+
+有一点失望，也是可以对源代码进行修改的地方
+
+### sample9_curl ###
+
+#### 编译 ####
+
+```shell
+cp libgo/tutorial/sample9_curl.cpp .
+apt-get install libcurl4-openssl-dev
+g++ -std=c++11 -g -Wall sample9_curl.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibgo_main -llibgo -lboost_coroutine -lboost_context -lboost_system -lboost_thread -lcurl -ldl -pthread -static -static-libgcc -static-libstdc++
+// 又是静态链接出问题
+g++ -std=c++11 -g -Wall sample9_curl.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibgo_main -llibgo -lboost_coroutine -lboost_context -lboost_system -lboost_thread -lcurl -ldl -pthread
+```
+
+#### 运行结果 ####
+
+![37](37.jpg)
+
+#### 代码解读 ####
+
+略（很多东西是关于curl编程的）
+
+### sample10_channel ###
+
+#### 编译 ####
+
+```shell
+cp libgo/tutorial/sample10_channel.cpp .
+g++ -std=c++11 -g -Wall sample10_channel.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibgo_main -llibgo -lboost_coroutine -lboost_context -lboost_system -lboost_thread -lcurl -ldl -pthread -static -static-libgcc -static-libstdc++
+```
+
+#### 代码解读 ####
+
+```c++
+/************************************************
+ * libgo sample10
+************************************************
+ * 在编写比较复杂的网络程序时，经常需要在多个协程
+ * 间传递数据，此时就需要用到channel。
+ *
+************************************************/
+#include <boost/thread.hpp>
+#include "coroutine.h"
+#include "win_exit.h"
+
+struct A
+{
+    // 可以由int隐式转换来构造
+    A(int i) : i_(i) {}
+    // 可以隐式转换成int
+    operator int() { return i_; }
+    int i_;
+};
+
+int main(int argc, char** argv)
+{
+    /*********************** 1. 基本使用 ************************/
+    // Channel也是一个模板类,
+    // 使用以下代码将创建一个无缓冲区的、用于传递整数的Channel：
+    co_chan<int> ch_0;
+
+    // channel是引用语义, 在协程间共享直接copy即可.
+    go [=]{
+        // 在协程中, 向ch_0写入一个整数1.
+        // 由于ch_0没有缓冲区, 因此会阻塞当前协程, 直到有人从ch_0中读取数据:
+        ch_0 << 1;
+    };
+
+    go [=] {
+        // Channel是引用计数的, 复制Channel并不会产生新的Channel, 只会引用旧的Channel.
+        // 因此, 创建协程时可以直接拷贝Channel.
+        // Channel是mutable的, 因此可以直接使用const Channel读写数据, 
+        // 这在使用lambda表达式时是极为方便的特性.
+        
+        // 从ch_0中读取数据:
+        int i;
+        ch_0 >> i;
+        printf("i = %d\n", i);
+    };
+    co_sched.RunUntilNoTask();
+
+    /*********************** 2. 带缓冲区的Channel ************************/
+    // 创建缓冲区容量为1的Channel, 传递智能指针:
+    co_chan<std::shared_ptr<int>> ch_1(1);
+
+    go [=] {
+        std::shared_ptr<int> p1(new int(1));
+
+        // 向ch_1中写入一个数据, 由于ch_1有一个缓冲区空位, 因此可以直接写入而不会阻塞当前协程.
+        ch_1 << p1;
+        
+        // 再次向ch_1中写入整数2, 由于ch_1缓冲区已满, 因此阻塞当前协程, 等待缓冲区出现空位.
+        ch_1 << p1;
+    };
+
+    go [=] {
+        std::shared_ptr<int> ptr;
+
+        // 由于ch_1在执行前一个协程时被写入了一个元素, 因此下面这个读取数据的操作会立即完成.
+        ch_1 >> ptr;
+
+        // 由于ch_1缓冲区已空, 下面这个操作会使当前协程放弃执行权, 等待第一个协程写入数据完成.
+        ch_1 >> ptr;
+        printf("*ptr = %d\n", *ptr);
+    };
+    co_sched.RunUntilNoTask();
+
+    /*********************** 3. 支持隐式转换 ************************/
+    // Channel在写入数据和读取数据时均支持隐式转换
+    co_chan<A> ch_a(1);
+    int i = 0;
+    // Channel在协程外部也可以使用, 不过阻塞行为会阻塞当前线程 (while sleep的方式, 而不是挂起),
+    // 因此不推荐在协程外部使用.
+    ch_a << 1;
+    ch_a >> i;
+    printf("i = %d\n", i);
+
+    /*********************** 4. 支持移动语义 ************************/
+    // Channel完整地支持移动语义, 因此可以存储类似std::unique_ptr这种不可拷贝但支持移动语义的对象.
+    co_chan<std::unique_ptr<int>> ch_move(1);
+    std::unique_ptr<int> uptr(new int(1)), sptr;
+    ch_move << std::move(uptr);
+    ch_move >> sptr;
+    printf("*sptr = %d\n", *sptr);
+    
+    /*********************** 5. 多读多写 ************************/
+    // Channel可以同时由多个线程读写.
+
+    /*********************** 6. 线程安全 ************************/
+    // Channel是线程安全的, 因此不必担心在多线程调度协程时会出现问题.
+    
+    boost::thread_group tg;
+
+    return 0;
+}
+```
+
+注释写得挺好的，看注释就能明白代码在干什么（`channel`在`Haskell`里也有）
+
+#### 概念澄清 ####
+
++ 复制后与以前的对象无关的对象叫做值语义，无法复制或者复制后与原来的对象存在关联的对象称为引用语义
+  + 自动引用计数的指针对象
+  + 代理对象
++ `mutable`关键字使得const对象的某些字段可变或者const成员函数能够修改某些字段
++ 移动语义避免了对象拷贝时的资源重新分配（尤其是内存的重新申请以及拷贝）
+
+### sample11_await ###
+
+#### 编译 ####
+
+```shell
+cp libgo/tutorial/sample11_await.cpp .
+// gethostbyname不支持静态链接，除非重新编译整个库
+g++ -std=c++11 -g -Wall sample11_await.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibgo_main -llibgo -lboost_coroutine -lboost_context -lboost_system -lboost_thread -ldl -pthread
+// 混合使用动态链接以及静态链接
+// 现在还不能使用，放在这里只是告诉自己：确实可以静态／动态链接混合使用
+g++ -std=c++11 -g -Wall sample11_await.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -Wl,-Bstatic -llibgo_main -llibgo -lboost_coroutine -lboost_context -lboost_system -lboost_thread -ldl -pthread -Wl,-Bdynamic -lc
+```
+
+#### 运行结果 ####
+
+![38](38.jpg)
+
+#### 代码解读 ####
+
+```c++
+/************************************************
+ * libgo sample10
+************************************************
+ * 除了网络IO之外, 有时也难免需要执行一些阻塞式的系统调用
+ * 比如: gethostbyname_r, 文件IO等等
+ *
+ * 如果直接调用, 这些会真正阻塞调度线程,
+ * 因此需要使用co_await将操作投递值线程池中完成
+************************************************/
+#include <netdb.h>
+#include <chrono>
+#include <iostream>
+#include <boost/thread.hpp>
+#include "coroutine.h"
+#include "win_exit.h"
+using namespace std;
+using namespace std::chrono;
+
+// 一个阻塞操作
+hostent* block1(const char *name)
+{
+    printf("do block1\n");
+    return gethostbyname(name);
+}
+
+void block2()
+{
+    printf("do block2\n");
+    gethostbyname("www.google.com");
+}
+
+void foo()
+{
+    printf("start co_await\n");
+    /** co_await是一个宏, 需要一个参数: 返回类型
+     *  co_await(type)后面要写一个可调用对象 (lambda, 函数指针, function对象等等, 规则和go关键字相同)
+     *  在co_await内部会将操作任务到线程池中, 并使用channel等待任务完成。
+     */
+    hostent* ht = co_await(hostent*) []{ return block1("www.baidu.com"); };
+    (void)ht;
+
+    /** co_await也可以用于无返回值的调用
+     *
+     */
+    co_await(void) block2;
+
+    // 不要投递会无限等待的任务到线程池中, 会导致线程池的一个调度线程被阻塞,
+    // 一旦线程池的调度线程全部被阻塞, 线程池就无法工作了.
+    printf("done co_await\n");
+}
+
+int main(int argc, char** argv)
+{
+    // 如果需要使用线程池功能, 需要用户自行创建线程去Run线程池.
+    boost::thread_group tg;
+    for (int i = 0; i < 4; ++i) {
+        tg.create_thread([]{co_sched.GetThreadPool().RunLoop();});
+    }
+
+    go foo;
+    go foo;
+    go foo;
+    go foo;
+    co_sched.RunUntilNoTask();
+
+    return 0;
+}
+```
+
+简单易懂（直接看源代码和注释）
