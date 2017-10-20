@@ -235,3 +235,203 @@ gdb都没办法停在main函数的入口点（所以怎么调试）
 
 ![5](5.png)
 
+### sample3_echo.cpp ###
+
+#### 编译 ####
+
+```shell
+cp libgo/tutorial/sample3_echo.cpp .
+g++ -std=c++11 -g -Wall sample3_echo.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibgo -llibgo_main -lboost_coroutine -lboost_context -lboost_system -lboost_thread -lpthread -static -static-libgcc -static-libstdc++
+// 很不幸，sample3与sample2有相同的问题，只能用动态链接
+g++ -std=c++11 -g -Wall sample3_echo.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibgo -llibgo_main -lboost_coroutine -lboost_context -lboost_system -lboost_thread -lpthread
+LD_LIBRARY_PATH=/usr/local/lib
+export LD_LIBRARY_PATH
+./a.out
+```
+
+#### 运行结果 ####
+
+![6](6.png)
+
+#### 代码解读 ####
+
+主要是使用tcp协议进行网络编程，在这里不分析全部代码，只是看看IO相关部分
+
+把同步阻塞IO改成异步IO，让其他协程在等待时继续执行是协程的重要功能
+
+![7](7.png)
+
+![8](8.png)
+
+我们把main函数改成sample1的形式：
+
+![9](9.png)
+
+你猜发生了什么？？？
+
+可以正常地静态链接／运行
+
+#### TODO ####
+
+弄清楚为什么需要加上thread_group才能正常静态链接／运行？
+
+为什么动态链接就不需要这种神奇的操作？
+
+要解释这两个问题当然只能读完源代码再说啦！
+
+### sample4_exception.cpp ###
+
+#### 编译 ####
+
+```shell
+cp libgo/tutorial/sample4_exception.cpp .
+g++ -std=c++11 -g -Wall sample4_exception.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibgo -llibgo_main -lboost_coroutine -lboost_context -lboost_system -lboost_thread -lpthread -static -static-libgcc -static-libstdc++
+```
+
+#### 运行结果 ####
+
+![10](10.png)
+
+![11](11.png)
+
+#### 代码解读 ####
+
+![12](12.png)
+
+如果协程内未捕获异常，可以在Run结束后再抛出，是一个很不错的设计
+
+内置异常未捕获的log打印，很贴心，用起来应该会很方便
+
+```c++
+co_sched.GetOptions().exception_handle = co::eCoExHandle::delay_rethrow;
+go []{ throw 1; };
+try {
+    co_sched.RunUntilNoTask();
+} catch (int v) {
+    printf("caught delay throw exception:%d\n", v);
+}
+```
+
+这段代码展示的就是异常的延迟抛出（怎么做的这件事是读源代码时重点关注的）
+
+```c++
+co_sched.GetOptions().debug |= co::dbg_exception;
+co_sched.GetOptions().exception_handle = co::eCoExHandle::debugger_only;
+go []{
+    // 为了使打印的日志信息更加容易辨识，还可以给当前协程附加一些调试信息。
+    co_sched.SetCurrentTaskDebugInfo("throw_ex");
+
+    // 重定向日志信息输出至文件
+    co_sched.GetOptions().debug_output = fopen("log", "a+");
+
+    throw std::exception();
+};
+```
+
+这里展示的是异常写入到log文件，方便后续的调试工作
+
+```c++
+/* boost::thread_group tg; */
+co_sched.RunUntilNoTask();
+/* tg.join_all(); */
+boost::thread_group tg;
+return 0;
+```
+
+这里要说的是，只要有thread_group类型的变量（无论它在哪里？？），都可以静态链接并且正常运行
+
+（反正tg变量的存在就是一个谜☝️）
+
+#### 意外收获 ####
+
+如果说，只要存在tg变量就可以正常静态链接／运行：
+
+那么在`co_main`里添加一个tg变量有没有用呢（sample2运用的`co_main`好像只是一个关于`main`的宏）？
+
+![13](13.png)
+
+有用的！
+
+至于为什么，之后再探究吧！
+
+### sample5_asio ###
+
+#### 编译 ####
+
+```shell
+cp libgo/tutorial/sample5_asio.cpp .
+g++ -std=c++11 -g -Wall sample5_asio.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibgo -llibgo_main -lboost_coroutine -lboost_context -lboost_system -lboost_thread -lpthread -static -static-libgcc -static-libstdc++
+```
+
+当然，需要添加一个`thread_group`类型的变量到`main`函数
+
+这里主要的关注点是boost的asio网络库，运行结果和代码分析我们就略过
+
+asio网络库之后在看吧（或许用c++17入选的网络库）
+
+### sample6_mutex ###
+
+#### 写在前面 ####
+
+同步IO操作改异步IO操作是有代价的，需要付出额外的代码
+
+对于临界区或者锁之类的操作，是有软件算法的，可以不需要那么麻烦的操作
+
+（这或许是区别对待mutex和io的原因之一，总之不要用操作系统提供的原生临界区和锁）
+
+#### 编译 ####
+
+```shell
+cp libgo/tutorial/sample6_mutex.cpp .
+// 稍微修改原文件
+g++ -std=c++11 -g -Wall sample6_mutex.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibgo -llibgo_main -lboost_coroutine -lboost_context -lboost_system -lboost_thread -lpthread -static -static-libgcc -static-libstdc++
+```
+
+等到了来自仓库维护者的回复：
+
+![15](15.png)
+
+```shell
+g++ -std=c++11 -g -Wall sample6_mutex.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibgo_main -llibgo -lboost_coroutine -lboost_context -lboost_system -lboost_thread -pthread -static -static-libgcc -static-libstdc++
+```
+
+![16](16.png)
+
+```shell
+
+g++ -std=c++11 -g -Wall sample6_mutex.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibgo_main -llibgo -lboost_coroutine -lboost_context -lboost_system -lboost_thread -ldl -pthread -static -static-libgcc -static-libstdc++
+```
+
+然而，还是不能运行（至少在debian 9环境下）
+
+clang -std=c++11 -g -Wall sample6_mutex.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibgo_main -llibgo -lboost_coroutine -lboost_context -lboost_system -lboost_thread -ldl -pthread -static -static-libgcc -static-libstdc++
+
+#### 运行结果 ####
+
+![14](14.png)
+
+#### 代码解读 ####
+
+![17](17.png)
+
+锁操作和IO操作应该是可以一视同仁的，也就是说，有办法让我们用原生的操作系统提供的锁却不沉睡线程
+
+（可以自己做做看）
+
+![18](18.png)
+
+`mutable`用于说明匿名函数可以修改捕获到的变量或者调用它们的非const方法
+
+cm.lock()是一个非同步阻塞操作（所以会继续往下执行不锁住线程）
+
+稍稍改动一下代码：
+
+![19](19.png)
+
+运行结果很让我吃惊：
+
+![20](20.png)
+
+为什么不是coroutine 2先运行（讲道理coroutine 1应该被锁住了啊）？
+
+coroutine 2是先运行，但是mutex的相关操作会自动导致该协程主动释放运行的权利；所以从打印的结果来看，好像是coroutine 1先运行（在cm.unlock()前加一个printf语句就能够验证）
