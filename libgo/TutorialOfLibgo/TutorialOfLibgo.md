@@ -171,3 +171,67 @@ int main()
   + 返回一个值
   + 从外界获取一个值
 
+#### TODO ####
+
+原版的sample2_yield.cpp以`co_main`作为主函数，省去调度器的配置工作
+
+不能够通过编译（链接时发现缺少函数）
+
+进入libgo/tutorial文件夹，执行以下命令：
+
+```shell
+mkdir build && cd build
+cmake ..
+make sample2_yield.t
+./sample2_yield.t
+```
+
+能够产生和前面一模一样的结果，证明原版文件本身是没有问题的，只不过编译选项不对
+
+不过，如果我们用docker cp命令把可执行文件拷贝出来，其在主机是不能执行的（说明采用动态链接）
+
+于是，在libgo容器的~文件夹内执行以下命令：
+
+```shell
+cp libgo/tutorial/sample2_yield.cpp .
+g++ -std=c++11 -g -Wall sample2_yield.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibgo -llibgo_main -lboost_coroutine -lboost_context -lboost_system -lboost_thread -lpthread
+LD_LIBRARY_PATH=/usr/local/lib
+export LD_LIBRARY_PATH
+./a.out
+```
+
+可以看到正常输出的结果
+
+问题是：为什么一旦使用静态链接就会出现问题？
+
+![3](3.png)
+
+很有可能这些依赖项之间存在环（互相依赖），所以我们把依赖项重复一遍（简单粗暴）：
+
+```shell
+g++ -std=c++11 -g -Wall sample2_yield.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibgo -llibgo_main -lboost_coroutine -lboost_context -lboost_system -lboost_thread -lpthread -llibgo -llibgo_main -lboost_coroutine -lboost_context -lboost_system -lboost_thread -lpthread -static -static-libgcc -static-libstdc++
+```
+
+好了，编译不存在问题了（果然是依赖项顺序不对或者依赖项存在环形依赖）
+
+你以为这就结束了吗？（太天真了！！！哈哈哈～）
+
+运行时又出现了问题：
+
+![4](4.png)
+
+我们使用libgo的可调试版本来判断问题出现在什么地方（编译sample2_yield.cpp时记得加上-ggdb选项）
+
+```shell
+warning: Error disabling address space randomization: Operation not permitted
+terminate called after throwing an instance of 'std::system_error'
+  what():  Unknown error -1
+During startup program terminated with signal SIGABRT, Aborted.
+```
+
+gdb都没办法停在main函数的入口点（所以怎么调试）
+
+向维护团队提问：
+
+![5](5.png)
+
