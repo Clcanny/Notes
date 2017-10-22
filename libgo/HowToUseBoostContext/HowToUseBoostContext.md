@@ -408,13 +408,340 @@ struct my_control_structure  {
 
 ### Inverting the control flow ###
 
+```c++
+#include <boost/context/all.hpp>
+#include <iostream>
+#include <sstream>
 
+namespace ctx = boost::context;
+/*
+ * grammar:
+ *   P ---> E '\0'
+ *   E ---> T {('+'|'-') T}
+ *   T ---> S {('*'|'/') S}
+ *   S ---> digit | '(' E ')'
+ */
+
+class Parser
+{
+private:
+    char next;
+    std::istream& is;
+    std::function<void(char)> cb;
+ 
+    char pull()
+    {
+        return std::char_traits<char>::to_char_type(is.get());
+    }
+ 
+    void scan()
+    {
+        do
+        {
+	    	next = pull();
+        }
+        while (isspace(next));
+    }
+
+public:
+    Parser(std::istream& is_, std::function<void(char)> cb_) :
+		next(), is(is_), cb(cb_)
+    {}
+ 
+    void run()
+    {
+		scan();
+        E();
+    }
+
+private:
+    void E()
+    {
+		T();
+        while (next == '+'||next == '-')
+        {
+	    	cb(next);
+	    	scan();
+	    	T();
+        }
+    }
+ 
+    void T()
+    {
+        S();
+        while (next == '*' || next ==  '/')
+        {
+           cb(next);
+           scan();
+           S();
+        }
+    }
+
+    void S()
+    {
+        if (isdigit(next))
+		{
+           cb(next);
+           scan();
+        }
+        else if (next == '(')
+		{
+	    	cb(next);
+	    	scan();
+	    	E();
+	    	if (next == ')')
+	    	{
+				cb(next);
+				scan();
+            }
+	    	else
+	    	{
+				throw std::runtime_error("parsing failed");
+	    	}
+        }
+        else
+		{
+	    	throw std::runtime_error("parsing failed");
+        }
+    }
+};
+
+int main()
+{
+    std::istringstream is("1+1");
+    // execute parser in new continuation
+    ctx::continuation source;
+    // user-code pulls parsed data from parser
+    // invert control flow
+    char c;
+    bool done = false;
+    source = ctx::callcc(
+	    [&is, &c, &done](ctx::continuation&& sink) {
+            // create parser with callback function
+            Parser p(is,
+                     [&sink, &c](char c_) {
+						// resume main continuation
+						c = c_;
+						sink = sink.resume();
+                     });
+                // start recursive parsing
+                p.run();
+                // signal termination
+                done = true;
+                // resume main continuation
+                return std::move(sink);
+            }
+	);
+    while (!done)
+    {
+        printf("Parsed: %c\n",c);
+        source = source.resume();
+    }
+}
+```
+
+有几点想说的：
+
++ 这是一个简单的词法 + 语法分析器
++ Parser的构造器接受一个回调函数作为参数，所以Parse p(...)有一个lambda函数
++ 回调函数会挂起分析器的执行流，返回到sink continuation（即main函数）
++ main函数会不断地开启分析过程（通过调用source.resume()）
++ 分析器没有明显的退出循环的地方，只有不断地暂停（程序的停止是通过挂起分析器continuation来达到的）
+
+In this example a recursive descent parser uses a callback to emit a newly passed symbol. Using *call/cc* the control flow can be inverted, e.g. the user-code pulls parsed symbols from the parser - instead to get pushed from the parser (via callback).
+
+The data (character) is transferred between the two continuations.
+
+> 值得注意的是两个continuation之间的数据传递
 
 ### Implementations: fcontext_t, ucontext_t and WinFiber ###
 
+#### fcontext_t ####
+
+The implementation uses *fcontext_t* per default. fcontext_t is based on assembler and not available for all platforms. It provides a much better performance than *ucontext_t* (the context switch takes two magnitudes of order less CPU cycles; see section [*performance*](http://www.boost.org/doc/libs/1_65_1/libs/context/doc/html/context/performance.html#performance)) and *WinFiber*.
+
+> 依赖汇编且平台相关
+>
+> 更好的性能
+
+Because the TIB (thread information block on Windows) is not fully described in the MSDN, it might be possible that not all required TIB-parts are swapped. Using WinFiber implementation migh be an alternative.
+
+> 好的，Windows的锅
+
+#### ucontext_t ####
+
+As an alternative, [*ucontext_t*](https://en.wikipedia.org/wiki/Setcontext) can be used by compiling with `BOOST_USE_UCONTEXT` and b2 property `context-impl=ucontext`. *ucontext_t* might be available on a broader range of POSIX-platforms but has some [*disadvantages*](http://www.boost.org/doc/libs/1_65_1/libs/context/doc/html/context/rationale/other_apis_.html#ucontext) (for instance deprecated since POSIX.1-2003, not C99 conform).
+
+> 更好的通用性
+
+[*callcc()*](http://www.boost.org/doc/libs/1_65_1/libs/context/doc/html/context/cc.html#cc) supports [*Segmented stacks*](http://www.boost.org/doc/libs/1_65_1/libs/context/doc/html/context/stack/segmented.html#segmented) only with *ucontext_t* as its implementation.
+
+#### WinFiber ####
+
+With `BOOST_USE_WINFIB` and b2 property `context-impl=winfib` Win32-Fibers are used as implementation for [*callcc()*](http://www.boost.org/doc/libs/1_65_1/libs/context/doc/html/context/cc.html#cc).
+
+The first call of [*callcc()*](http://www.boost.org/doc/libs/1_65_1/libs/context/doc/html/context/cc.html#cc) converts the thread into a Windows fiber by invoking `ConvertThreadToFiber()`. If desired, `ConvertFiberToThread()` has to be called by the user explicitly in order to release resources allocated by `ConvertThreadToFiber()` (e.g. after using boost.context).
+
+> 这就有点难看了（没有完全屏蔽掉底层操作）
+
 ### Class continuation ###
 
+```c++
+#include <boost/context/continuation.hpp>
+
+class continuation {
+public:
+    continuation() noexcept = default;
+
+    ~continuation();
+
+    continuation(continuation && other) noexcept;
+
+    continuation & operator=(continuation && other) noexcept;
+
+    continuation(continuation const& other) noexcept = delete;
+    continuation & operator=(continuation const& other) noexcept = delete;
+
+    continuation resume();
+
+    template<typename Fn>
+    continuation resume_with(Fn && fn);
+
+    explicit operator bool() const noexcept;
+
+    bool operator!() const noexcept;
+
+    bool operator==(continuation const& other) const noexcept;
+
+    bool operator!=(continuation const& other) const noexcept;
+
+    bool operator<(continuation const& other) const noexcept;
+
+    bool operator>(continuation const& other) const noexcept;
+
+    bool operator<=(continuation const& other) const noexcept;
+
+    bool operator>=(continuation const& other) const noexcept;
+
+    template<typename charT,class traitsT>
+    friend std::basic_ostream<charT,traitsT> &
+    operator<<(std::basic_ostream<charT,traitsT> & os,continuation const& other) {
+
+    void swap(continuation & other) noexcept;
+};
+```
+
 ## Class execution_context (version 2) ##
+
+Class *execution_context* encapsulates context switching and manages the associated context' stack (allocation/deallocation).
+
+> execution_context封装context切换及栈空间的分配／去配
+
+*execution_context* allocates the context stack (using its [*StackAllocator*](http://www.boost.org/doc/libs/1_65_1/libs/context/doc/html/context/stack.html#stack) argument) and creates a control structure on top of it. This structure is responsible for managing context' stack. The address of the control structure is stored in the first frame of context' stack (e.g. it can not directly accessed from within *execution_context*). In contrast to [*execution_context* (v1)](http://www.boost.org/doc/libs/1_65_1/libs/context/doc/html/context/ecv1.html#ecv1) the ownership of the control structure is not shared (no member variable to control structure in *execution_context*). *execution_context* keeps internally a state that is moved by a call of *execution_context::operator()* (`*this` will be invalidated), e.g. after a calling *execution_context::operator()*, `*this` can not be used for an additional context switch.
+
+> 神奇的控制结构（嘿嘿嘿～）
+
+参见Allocation control structures on top of stack小节
+
+```c++
+namespace ctx=boost::context;
+// stack-allocator used for (de-)allocating stack
+fixedsize_stack salloc(4048);
+// allocate stack space
+stack_context sctx(salloc.allocate());
+// reserve space for control structure on top of the stack
+void * sp=static_cast<char*>(sctx.sp)-sizeof(my_control_structure);
+std::size_t size=sctx.size-sizeof(my_control_structure);
+// placement new creates control structure on reserved space
+my_control_structure * cs=new(sp)my_control_structure(sp,size,sctx,salloc);
+...
+// destructing the control structure
+cs->~my_control_structure();
+...
+struct my_control_structure  {
+    // captured continuation
+    ctx::continuation   c;
+
+    template< typename StackAllocator >
+    my_control_structure(void * sp,std::size_t size,stack_context sctx,StackAllocator salloc) :
+        // create captured continuation
+        c{} {
+        c=ctx::callcc(std::allocator_arg,preallocated(sp,size,sctx),salloc,entry_func);
+    }
+    ...
+};
+```
+
+> 如果没猜错，那么new操作符是重载过的：只负责初始化，不负责分配内存空间
+
+这段代码信息量很大：
+
++ 控制结构在execution_context中是不能通过正常的手段访问的（虽然内存连在一起）
++ 控制结构在干什么？（利用call/cc捕获环境）
++ 所以到底是continuation支撑execution_context还是execution_context支持continuation？
+
+*execution_context* is only move-constructible and move-assignable.
+
+> 老话题
+
+The moved state is assigned to a new instance of *execution_context*. This object becomes the first argument of the context-function, if the context was resumed the first time, or the first element in a tuple returned by *execution_context::operator()* that has been called in the resumed context. In contrast to [*execution_context* (v1)](http://www.boost.org/doc/libs/1_65_1/libs/context/doc/html/context/ecv1.html#ecv1), the context switch is faster because no global pointer etc. is involved.
+
+在这里要做一个很重要的区分（因为很容易混淆）：
+
++ call/cc：context-function接受的参数是continuation&&类型
++ execution_context的构造器：context-function接受的参数是execution_context<...>&&类型
++ call/cc与execution_context的关系是什么？区别是什么？
+
+On return the context-function of the current context has to specify an *execution_context* to which the execution control is transferred after termination of the current context.
+
+> 同call/cc的函数一样，execution_context中的context-function也需要返回一个execution_context
+
+If an instance with valid state goes out of scope and the context-function has not yet returned, the stack is traversed in order to access the control structure (address stored at the first stack frame) and context' stack is deallocated via the *StackAllocator*. The stack walking makes the destruction of *execution_context* slow and should be prevented if possible.
+
+*execution_context* expects a *context-function* with signature `execution_context(execution_context ctx, Args ... args)`. The parameter `ctx` represents the context from which this context was resumed (e.g. that has called *execution_context::operator()* on `*this`) and `args` are the data passed to *execution_context::operator()*. The return value represents the execution_context that has to be resumed, after termiantion of this context.
+
+Benefits of [*execution_context* (v2)](http://www.boost.org/doc/libs/1_65_1/libs/context/doc/html/context/ecv2.html#ecv2) over [*execution_context* (v1)](http://www.boost.org/doc/libs/1_65_1/libs/context/doc/html/context/ecv1.html#ecv1) are: faster context switch, type-safety of passed/returned arguments.
+
+> 三段话在AnalyseCotoutinesSwitch那篇文章中有过理解，不再赘述
+
+### usage of execution_context ###
+
+```c++
+int n=35;
+ctx::execution_context<int> source(
+    [n](ctx::execution_context<int> && sink,int) mutable {
+        int a=0;
+        int b=1;
+        while(n-->0){
+            auto result=sink(a);
+            sink=std::move(std::get<0>(result));
+            auto next=a+b;
+            a=b;
+            b=next;
+        }
+        return std::move(sink);
+    });
+for(int i=0;i<10;++i){
+    auto result=source(i);
+    source=std::move(std::get<0>(result));
+    std::cout<<std::get<1>(result)<<" ";
+}
+```
+
+有几点要说的：
+
++ source是lambda函数的执行环境，sink是main函数的执行环境
++ execution_context的模板参数是其它continuation要向该continuation传递的参数的类型
+  + sink要向source传递int（实际上是什么都无所谓），所以是ctx::execution_context\<int\> source(...)
+  + source要向sink传递斐波那契的结果，类型是int，所以是ctx::execution_context\<int\> && sink
++ sink怎么向source传递参数呢
+  + source的类型要正确：ctx::execution_context\<int\> source(…)，以准备好接收参数
+  + source构造器的参数是一个lambda函数，这个lambda函数的参数也要正确，第二个参数得是int类型
++ execution_context天然支持generator，相对于continuation而言（continuation之间共享变量多不优雅）
+
+既然source的参数无所谓，我们尝试把它改成char或者其它什么奇怪的类型，看能不能正常编译运行：
+
+
 
 ## Stack allocation ##
 
