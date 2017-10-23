@@ -162,3 +162,57 @@ generator啊哈哈哈！！！（这就触及到我的知识盲区了，怎么�
 
 （不行，我要去专门开一章学习boost.context）
 
+——————**这是一条结束boost-context学习的分界线（去看How To Use Boost.Context?）**——————
+
+# 第四步 #
+
+先说说我对execution_context的理解（不保证完全准确）：
+
++ execution_context是一个可以更方便传递参数的continuation
++ 所以，execution_context是在continuation的基础上实现的
+
+```shell
+gdb a.out
+b libgo/libgo/task.h:64
+start
+c
+shell clear
+```
+
+![9](9.jpg)
+
+看来ctx\_是一个execution_context类型的对象，ctx\_()就是在调用该对象的operator()成员函数
+
+ctx\_ = ctx\_() 是为ctx\_()赋一个新的值，因为旧的ctx\_已经因为operator()的调用而失效
+
+并且，我们还可以知道ctx\_()的类型是execution_context\<void\>，既不接受参数，也不向其它context传递参数
+
+（话说，如果不需要向其它continuation传递参数的话，为什么不直接用continuation？）
+
+boost.context帮我们恢复协程环境并且切换到对应的continutation（源代码就不要追下去了，另开一章分析boost.context的实现）（在这里只要知道调用ctx_()就会自动切换到对应的continuation就可以了）
+
+![10](10.jpg)
+
+![11](11.jpg)
+
+所以yield是什么？？？
+
+yield是调度协程（很可能就是main函数）的环境啊！！！同学们，这是一个多么重要的发现啊！！！
+
+lambda函数做了几件事：
+
++ 用一个指针指向yield（为什么不使用移动语义把yield的所有权抢过来？）
++ 调用fn函数
+
+我们还不知道一件很重要的事情：
+
++ 如果fn函数内部有一个阻塞式的操作，如何让fn把控制权交出来？
++ 也就是：fn内部在碰到阻塞式操作的时候怎么自动生成调用yield()？
+
+同时也解答了我们的一个疑问，为什么要捕获yield的一个指针？
+
+因为fn内部才能调用`*(this->yield_) = (*(this->yield_))()`啊！
+
+![12](12.jpg)
+
+以上两个函数也说明了this->yield_为什么需要存在
