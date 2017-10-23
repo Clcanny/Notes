@@ -8,4 +8,6 @@
 
 [Trace A Simple libgo App](TraceSimpleLibgoApp/TraceSimpleLibgoApp.md)
 
+[Analyse Coroutines Switch](AnalyseCoroutinesSwitch/AnalyseCoroutinesSwitch.md)
+
 [How To Use Boost.Context?](HowToUseBoostContext/HowToUseBoostContext.md)
