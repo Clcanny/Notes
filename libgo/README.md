@@ -11,3 +11,5 @@
 [Analyse Coroutines Switch](AnalyseCoroutinesSwitch/AnalyseCoroutinesSwitch.md)
 
 [How To Use Boost.Context?](HowToUseBoostContext/HowToUseBoostContext.md)
+
+[Analyse Block Operations Hook](AnalyseBlockOperationHook/AnalyseBlockOperationHook.md)
