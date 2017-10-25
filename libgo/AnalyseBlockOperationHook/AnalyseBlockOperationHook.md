@@ -459,3 +459,241 @@ connect为什么不利用一个集中的控制器，统一epoll？
 
 这一小段代码就解释了我们在`connect`函数分析中遇到的困惑，`connect`调用的`poll`函数不是原生的`poll`函数，它调用的`poll`函数要么不阻塞，要么会切换协程（同时调用libgo自己的定时器）
 
+# 第五步：收第四步的烂账 #
+
+## man poll ##
+
+poll() performs a similar task to select(2): it waits for one of a set of file descriptors to become ready to perform I/O.
+
+The set of file descriptors to be monitored is specified in the fds argument, which is an array of structures of the following form:
+
+```c++
+struct pollfd {
+    int   fd;         /* file descriptor */
+    short events;     /* requested events */
+    short revents;    /* returned events */
+};
+```
+
+The caller should specify the number of items in the fds array in nfds.
+
+The field fd contains a file descriptor for an open file.  If this field is negative, then the corresponding events field is ignored and the revents field returns zero.  (This provides an easy way of ignoring a file descriptor for a single poll() call: simply negate the fd field.  Note, however, that this technique can't be used to ignore
+file descriptor 0.)
+
+上面这几段话告诉我们几个有用的信息：
+
++ poll()函数需要fds数组和nfds（指定数组元素的个数）
++ 如果pollfd结构内的fd字段为负数，events字段将被忽略，revents字段会被填上0并返回（何时返回没有说明）
+
+The field events is an input parameter, a bit mask specifying the events the application is interested in for the file descriptor fd. This field may be specified as zero, in which case the only events that can be returned in revents are POLLHUP, POLLERR, and POLLNVAL (see below).
+
+The field revents is an output parameter, filled by the kernel with the events that actually occurred.  The bits returned in revents can include any of those specified in events, or one of the values POLLERR, POLLHUP, or POLLNVAL.  (These three bits are meaningless in the events field, and will be set in the revents field whenever the corresponding condition is true.)
+
+有三个事件很特殊，events不需要指定它们（指定了也没用），revents也有可能会返回，它们分别是：
+
++ POLLHUP
++ POLLERR
++ POLLNVAL
+
+If none of the events requested (and no error) has occurred for any of the file descriptors, then poll() blocks until one of the events occurs.
+
+如果没有事件发生，poll会导致当前线程阻塞直到某一事件发生
+
+非常重要的信息：poll调用是会导致线程阻塞的
+
+The timeout argument specifies the number of milliseconds that poll() should block waiting for a file descriptor to become ready.  The call will block until either:
+
++ a file descriptor becomes ready;
++ the call is interrupted by a signal handler; or
++ the timeout expires.
+
+也就是说timeout指定了最多阻塞多久
+
+Note that the timeout interval will be rounded up to the system clock granularity, and kernel scheduling delays mean that the blocking interval may overrun by a small amount.  Specifying a negative value in timeout means an infinite timeout.  Specifying a timeout of zero causes poll() to return immediately, even if no file descriptors are ready.
+
+又是两个很重要的信息：
+
++ timeout == -1：永远等待
++ timeout == 0：立马返回
+
+接下来要介绍三位特殊的嘉宾（它们之前出场过）：
+
++ POLLERR
+
+  Error condition (only returned in revents; ignored in events). This bit is also set for a file descriptor referring to the write end of a pipe when the read end has been closed.
+
+  错误发生（有可能是管道关闭等）
+
++ POLLHUP
+
+  Hang up (only returned in revents; ignored in events).  Note that when reading from a channel such as a pipe or a stream socket, this event merely indicates that the peer closed its end of the channel.  Subsequent reads from the channel will return 0 (end of file) only after all outstanding data in the channel has been consumed.
+
++ POLLNVAL
+
+  Invalid request: fd not open (only returned in revents; ignored in events).
+
+  文件描述符对应的文件没有打开
+
+以上内容参考自[man poll](http://man7.org/linux/man-pages/man2/poll.2.html)
+
+## add_into_reactor ##
+
+![49](49.jpg)
+
+![50](50.jpg)
+
+我们来到了FileDescriptor::add_into_reactor成员函数
+
+从类的名字上也不难看出一个文件描述符对应一个该类的对象，所以该类会保留与文件描述符有关的状态
+
+上面一段代码就是对文件描述符对应的文件未打开的处理
+
+![51](51.jpg)
+
+如果用户要求读文件且文件当前可读（或者要求写文件且当前文件可写），则直接返回
+
+并且在返回之前向io-sentry登记有关的事件
+
+![52](52.jpg)
+
+在这里，我们终于看到了对IO事件的全局管理器
+
+如果文件描述符不在epoll之中，则把它添加进去（注意此处是不阻塞的）
+
+当然如果添加失败，要返回failed
+
+![53](53.jpg)
+
+如果文件描述符在epoll之中，则修改需要等地的事件
+
+同样，如果失败，要返回failed
+
+![54](54.jpg)
+
+一些比较平凡的处理（比如返回progress）
+
+add_into_reactor告诉我们什么呢？
+
++ 对于IO，libgo也建立了全局的管理器或者处理器
++ add_into_reactor负责把IO事件提交给epoll，不会阻塞当前线程
++ 很有可能全局的管理器负责唤醒对应的协程
++ io-sentry很可能负责IO相关事件的收集与记录
+
+## libgo_poll ##
+
+![48](48.jpg)
+
+libgo_poll比原生的poll多一个参数：nonblocking_check（接下来我们会看到这个参数怎么用）
+
+![55](55.jpg)
+
+这里都是对特殊情况的处理（比如说不在协程中调用系统调用），没有值得关注的地方
+
+除了timeout == 0的处理，直接调用poll_f
+
+但是此次调用poll_f并不会导致线程阻塞，因为timeout == 0；外面的协程这样调用poll也不过是为了检查一下文件描述符是否合法（或者是为了撞大运？），所以直接把结果给它就好
+
+![56](56.jpg)
+
+还记得在man poll小节里面说过：如果文件描述符为负数，可以把revents设置为0然后返回
+
+不过没有说是立即返回还是延时返回，所以在这里我们做了延时返回的处理（让发出调用的协程沉睡，给其它协程以执行的机会）
+
+![57](57.jpg)
+
+nonblocking_check参数在这里唯一一次用上了，告诉我们要不要对文件描述符的合法性进行检查
+
+（会不会出现刚好有文件准备好读或者写的情况？如果有，怎么处理？）
+
+![58](58.jpg)
+
+创建一个IO sentry，我对这个IO sentry需要做的事情存在两种猜测：
+
++ 记录有关事件 + 接受epoll发出的事件并唤醒当前协程
++ 只记录有关事件，接受epoll发出的事件并唤醒当前协程由调度器来做
+
+我现在更加倾向于第二种猜测
+
+io_sentry含有fds的信息（下面的代码会从io_sentry中提取相关信息）
+
+在这个时候，可以把io_sentry看成是为记录信息而做的抽象层
+
+![59](59.jpg)
+
+处理文件描述符为-1和对应文件已经关闭的情况
+
+注意返回POLLNVAL是符合man poll的规范的
+
+![60](60.jpg)
+
+通过调用add_into_reactor成员函数把文件描述符及相应事件添加到epoll中
+
+整个过程是不阻塞的（参考我们对add_into_reactor的解析）
+
+`triggered`表达是否至少有一个文件描述符对应的文件已经准备好
+
+`added`表达是否至少有一个文件描述符添加到epoll中
+
+![61](61.jpg)
+
+所有的添加操作都失败了，直接返回吧（失败原因写在各自的revents中）
+
+![62](62.jpg)
+
+如果没有任何一个文件已经准备好，则挂起整个协程
+
+超过等待时间后，g_Scheduler会唤醒该协程
+
+![63](63.jpg)
+
+设置好定时器之后（设置定时器对于线程／协程来说都是非阻塞的），切换协程
+
+有一个非常重要的点要提一下（在代码里看不出来）：
+
++ 当前协程除了因为时间到达而被唤醒，也会被epoll发出的事件而唤醒
++ 只不过被epoll唤醒会比较曲折，很有可能要通过全局的IO管理器或者调度器
+
+注意，至此为止，协程已经被挂起，下面的代码都是协程被唤醒之后执行的
+
+![64](64.jpg)
+
+既然协程已经被唤醒，就要清除掉一些引用计数（io_sentry／timer）
+
+![65](65.jpg)
+
+如果triggered == true，那说明：巧了！调用poll的时候刚好有文件已经准备好，可以直接返回
+
+![66](66.jpg)
+
+返回之前干两件事情：
+
++ 设置每一个revents
++ 告诉调用者：此次返回有多少个文件已经准备好，可以用了
+
+## poll ##
+
+![67](67.jpg)
+
+因为libgo_poll是非阻塞的，所以poll也是非阻塞的
+
+## connect ##
+
+![68](68.jpg)
+
+一些特殊情况的处理
+
+![69](69.jpg)
+
+connect_f是非阻塞的，所以不会导致线程沉睡，也不会导致协程切换
+
+![70](70.jpg)
+
+`s_connect_timeout`好像是一个全局的const变量（好像是-1）
+
+`poll`要么立即返回，要么导致协程切换（不会阻塞线程）
+
+到这里，我们终于看懂了`connect`（噢耶😯✌️）（玄机在其它地方，怪不得第一次看的时候没头没脑）
+
+![71](71.jpg)
+
+做一些平凡的处理（不分析了，也不是本文关心的重点）
