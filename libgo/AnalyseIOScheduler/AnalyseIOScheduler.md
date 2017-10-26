@@ -362,3 +362,87 @@ else部分是在多线程情况下，不得不进行的原子操作
 
 ![55](55.jpg)
 
+## IoWait::reactor_ctl ##
+
+![56](56.jpg)
+
+`is_support == is_socket() || is_epoll()`
+
+`int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event)`
+
+![57](57.jpg)
+
+`epfd`是`epoll instance`的代号，`fd`是文件的代号
+
+一个`epoll instance`可以对应多个文件，所以一个`epfd`可以对应多个`fd`
+
+`epoll_ctl`支持三种操作：增加／修改／删除
+
+![58](58.jpg)
+
+`reactor_ctl`只不过是对`epoll_ctl`的一个封装
+
+注意IoWait的实例与epfd不是一一对应的关系（我猜的，因为调用`reactor_ctl`还需要指定`epfd`）
+
+## IoWait::IOBlockTriggered ##
+
+![59](59.jpg)
+
+代码很容易懂
+
+也不是直接切换到等到对应IO事件的任务／协程，而是把它们加到可运行列表
+
+# 第六步：谁在调用IOBlockTriggered #
+
+![61](61.jpg)
+
+linux_glibc_hook.cpp
+
+![60](60.jpg)
+
+定时器结束后触发（之前已经分析过这段代码）
+
+fd_context.cpp
+
+![62](62.jpg)
+
+关闭文件描述符的时候顺便触发一下IO事件（之前也已经分析过这段代码）
+
+io_wait.cpp
+
+![63](63.jpg)
+
+`epoll_wait`是会导致当前线程阻塞的
+
+所以这还是一个类似于轮询（只不过这个轮询会阻塞，不会使得CPU空转）的方式
+
+![64](64.jpg)
+
+最终，我们还是看到了：谁在“等待”（更准确的说法是阻塞式地轮询）epoll并调用IOBlockTriggered
+
+那么，谁在调用这个函数呢？
+
+![65](65.jpg)
+
+scheduler.cpp
+
+![66](66.jpg)
+
+如果是我，我会怎么去设置wait_milliseconds呢？
+
++ 正常情况下设置为0（即不阻塞，不建议设置为一个很小的值，不然导致线程切换，消耗更大）
++ 如果所有的协程都至少沉睡x ms，则把wait_millseconds设置为x ms
+
+
+
+至此为止，我们已经把：
+
++ 如何hook阻塞的系统调用
++ 如何监听epoll事件并唤醒协程
+
+都弄明白了，对这部分有一个不错的认识
+
+我们还需要做什么：
+
++ 重新阅读一下这个系列的文章，看看有没有什么错别字
++ 画一个运行时图和一个静态的模块图，总结这几篇文章
