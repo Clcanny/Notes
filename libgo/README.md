@@ -17,3 +17,5 @@
 [Analyse IO Scheduler](AnalyseIOScheduler/AnalyseIOScheduler.md)
 
 [Trace Sleep](TraceSleep/TraceSleep.md)
+
+[AnalyseCoroutineMutex](AnalyseCoroutineMutex/AnalyseCoroutineMutex.md)
