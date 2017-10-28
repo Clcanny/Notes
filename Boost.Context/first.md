@@ -320,5 +320,220 @@ boost::context::continuation::resume成员函数的变种
 
 这里面还有很多的猜测，待会用gdb看一看
 
+### 解决那些猜测 ###
+
+#### 第一个猜测：resume函数的两个参数是什么 ####
+
+![22](22.jpg)
+
+![23](23.jpg)
+
+找到了调用resume函数之前的代码（这段代码在main函数中），稍微看一眼
+
++ resume函数的第一个参数 = rdi = rax = rbp - 0x18
++ resume函数的第二个参数 = rsi = rdx = rbp - 0x28
+
+再回到gdb跟踪一下：
+
+![24](24.jpg)
+
+我们验证了rdx寄存器指向source，也就是this指针
+
+所以resume函数的第二个参数就是this指针，而不是continuation类型的某个字段的地址
+
+![25](25.jpg)
+
+我们再次验证：rax寄存器 = 返回值存储地的首地址，即resume函数的第一个参数指明了返回值应该存放在什么地方
+
+总结：
+
++ resume函数的第一个参数指明返回值存储地
++ resume函数的第二个参数是this指针
+
+#### 第二个猜测：resume函数的返回值（rax寄存器）是什么 ####
+
+![26](26.jpg)
+
+![27](27.jpg)
+
+这个结果我只能说一半喜一半忧：
+
++ 喜：\$1 == \$2（如果我们关于resume函数的第一个参数的猜测是对的，我们对resume函数的返回值的猜测也是对的）
++ 忧：\$2 != \$8（有可能我们对于resume函数的第一个参数的猜测是错的）
+
+那么到底是怎么回事呢？
+
+![28](28.jpg)
+
+闭着眼睛我都知道这是转移构造函数／转移赋值函数（微笑微笑微笑）
+
+![29](29.jpg)
+
+说几句：
+
++ rax／rdi是resume函数的第一个参数，告诉resume函数应该把返回值放什么地方
++ rdx／rsi是resume函数的第二个参数，告诉resume函数this指针的值
++ 两个参数肯定是不一样的
+  + 为什么不能做优化呢？让第一个参数等于第二个参数，即返回值覆盖this指针？因为赋值构造函数被禁用了，取代它的是带有转移语义的赋值构造函数
+  + `$2 != $8`是非常正常的，但你最终会发现它们的内容是一样的（经过转移语义处理）
+    + `$rax != &source`
+    + *($rax) == source
+
+如何证明“转移”这件事情：
+
+![30](30.jpg)
+
+![31](31.jpg)
+
+总结：
+
++ resume函数的第一个参数：指出返回值放到什么地方
++ resume函数的第二个参数：this指针
++ resume函数的返回值：指出返回值放到什么地方（和它接受的第一个参数相等）
+
+#### 第三个猜测：0x401b32在干嘛？jump_fcontext接受几个参数？ ####
+
+![32](32.jpg)
+
+可以看到：jump_fonctext函数接受两个参数，第二个参数是nullptr
+
+你猜猜看：rsi寄存器和esi寄存器的区别是什么？
+
+![33](33.jpg)
+
+我们在前面学到两点知识：
+
++ nullptr用4字节表示：`movq   $0x0,-0x8(%rbp)`表达新建nullptr变量
++ rsi寄存器用于保存第二个参数
+
+所以我们可以顺理成章地猜测：
+
++ esi寄存器用于保存第二个参数
++ 特别地，这个参数是nullptr
+
+在其他地方，我们还找到这样一段代码：
+
+![34](34.jpg)
+
+我们的猜测基本上是对的
+
+总结：
+
++ jump_fcontext接受两个参数
++ 0x401b32在设置第二个参数
+
+#### 第四个猜测：continuation构造器接受哪几个参数？ ####
+
+![35](35.jpg)
+
+![36](36.jpg)
+
+我们已经知道：
+
++ rsi寄存器保存第二个参数
++ rdi寄存器保存第一个参数
++ 一般而言，第一个参数会表明返回值的存储位置
+
+所以：
+
++ continuation的构造器接受两个参数
+  + 第一个参数指出：构造出来的对象（也就是返回值）存放在哪里
+  + 第二个参数是fctx
++ continuation的构造器的返回值（rax寄存器）表明：构造出来的对象存放在哪里，因而等于第一个参数
+
+整个代码也不长，也很容易理解
+
+#### 第五个猜测：jump_fcontext的返回值是什么？为什么没有告诉jump_fcontext把返回值（transfer_t类型的对象）放哪里？ ####
+
+![37](37.jpg)
+
+rax -> rdx -> rdx -> rsi
+
+rsi = fctx
+
+所以，rax寄存器的值（也即jump_fcontext的返回值）就是fctx
+
+![38](38.jpg)
+
+如果jump_fcontext函数只返回fctx，即只返回fcontext_t
+
+实际上就是返回void*，是一个基本类型，所以不需要按照结构体作为返回值来处理
+
+jump_fcontext自然也不接受一个隐式参数来指定返回值的位置
+
+总结：
+
++ 在这段代码中：jump_fcontext函数只返回void*而不是transfer_t结构体（不知道为什么）
++ 所以rax寄存器的值就是jump_fcontext函数的真正返回值
++ 所以jump_fcontext函数不需要一个隐式参数来指定“真正”的返回值的地址
+
+至于为什么不返回结构体而是返回void*，很可能和这个奇怪的声明有关：
+
+![39](39.jpg)
+
+![40](40.jpg)
+
+![41](41.jpg)
+
+![42](42.jpg)
+
+没（mo）解（jie）
+
+```c++
+#include <boost/context/detail/fcontext.hpp>
+#include <boost/config.hpp>
+#include <boost/cstdint.hpp>
+#include <boost/context/detail/config.hpp>
+
+#ifdef BOOST_HAS_ABI_HEADERS
+# include BOOST_ABI_PREFIX
+#endif
+
+#ifdef BOOST_HAS_ABI_HEADERS
+# include BOOST_ABI_SUFFIX
+#endif
+
+#include <stdio.h>
+
+/*
+ * generic helper macros
+ */
+#define CALL(macro, arguments) macro arguments
+#define STR(...) STR_(__VA_ARGS__)
+#define STR_(...) # __VA_ARGS__
+
+/*
+ * dumps a macro and its expansion to stdout
+ * the second argument is optional and specifies the number of
+ * arguments that macro takes: 0 means macro takes zero arguments
+ * no second argument means macro is not function-like
+ */
+#define DUMP_MACRO(macro, ...) \
+    do { \
+        puts ( \
+            "'" \
+            # macro STR(DUMP_MACRO_ARGS_ ## __VA_ARGS__) \
+            "' expands to '" \
+            STR(CALL(macro, DUMP_MACRO_ARGS_ ## __VA_ARGS__)) \
+            "'" \
+        ); \
+    } while (0)
+/* helpers for DUMP_MACRO, add more if required */
+#define DUMP_MACRO_ARGS_
+#define DUMP_MACRO_ARGS_0 ()
+#define DUMP_MACRO_ARGS_1 (<1>)
+#define DUMP_MACRO_ARGS_2 (<1>, <2>)
+#define DUMP_MACRO_ARGS_3 (<1>, <2>, <3>)
+
+int  main()
+{
+    DUMP_MACRO(BOOST_CONTEXT_DECL);
+    DUMP_MACRO(BOOST_CONTEXT_CALLDECL);
+}
+```
+
 ## 动态跟踪？ ##
 
+神马？你还想看续集？
+
+可是我要碎觉了::alarm_clock: ::sleeping: ::sleepy:
