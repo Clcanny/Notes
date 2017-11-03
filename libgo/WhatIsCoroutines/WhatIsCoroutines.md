@@ -23,13 +23,13 @@
 
 回调把逻辑上联通的代码切断并放到不同的地方
 
-协程只不过是一颗语法糖，让我们把逻辑上联通的代码写到一起，然后用一个关键字表达“回调”的需求
+协程只不过是一颗语法糖，让我们把逻辑上连通的代码写到一起，然后用一个关键字表达“回调”的需求
 
 ## 协程是状态机的另一种表现形式 ##
 
-Co-routines as an alternative to state machines
+Co-routines as an alternative to state machines.
 
-Co-routines are to state machines what recursion is to stacks
+Co-routines are to state machines what recursion is to stacks.
 
 递归允许我们隐式地利用栈结构（比如深度优先遍历二叉树，递归使得我们不需要维护一个栈去记住我们当前的位置）；协程允许我们隐式地利用状态机，而不需要专门设置类的成员或者全局变量去记住当前状态
 

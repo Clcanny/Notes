@@ -60,7 +60,7 @@ The function only executes on **next**().
 
 Function resumes on next call to **next**().
 
-> **next**关键字催促一次执行，知道碰到下一个**yield**关键字
+> **next**关键字催促一次执行，直到碰到下一个**yield**关键字
 
 When the generator returns, iteration stops.
 
