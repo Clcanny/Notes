@@ -103,7 +103,7 @@ g++ -std=c++11 -g -Wall sample1_go.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibg
 
 #### 代码解读 ####
 
-+ 需要调度的函数可以以函数指针／函数对象／函数对象的变种（匿名表达式／bind表达式／function表达式）
++ 需要调度的函数可以以函数指针／函数对象／函数对象的变种（匿名表达式／bind表达式／function表达式）的形式出现
 + 指示需要参与调度的函数可以用`go`／`go_stack`／`go_dispatch`
 + 启动两个线程与主线程一起调度的代码比较难懂，涉及到boost thread
 
@@ -259,6 +259,8 @@ export LD_LIBRARY_PATH
 
 把同步阻塞IO改成异步IO，让其他协程在等待时继续执行是协程的重要功能
 
+（修改：“把同步阻塞IO改成异步IO”这个讲法错的，正确的表述是“把导致线程沉睡的同步阻塞IO改成只导致协程沉睡的同步阻塞IO”）
+
 ![7](7.png)
 
 ![8](8.png)
@@ -398,13 +400,16 @@ g++ -std=c++11 -g -Wall sample6_mutex.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -ll
 ![16](16.png)
 
 ```shell
-
 g++ -std=c++11 -g -Wall sample6_mutex.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibgo_main -llibgo -lboost_coroutine -lboost_context -lboost_system -lboost_thread -ldl -pthread -static -static-libgcc -static-libstdc++
 ```
 
 然而，还是不能运行（至少在debian 9环境下）
 
+```shell
 clang -std=c++11 -g -Wall sample6_mutex.cpp -Ilibgo/libgo/ -Ilibgo/libgo/linux -llibgo_main -llibgo -lboost_coroutine -lboost_context -lboost_system -lboost_thread -ldl -pthread -static -static-libgcc -static-libstdc++
+```
+
+用clang代替gcc作为编译器也有问题
 
 #### 运行结果 ####
 
