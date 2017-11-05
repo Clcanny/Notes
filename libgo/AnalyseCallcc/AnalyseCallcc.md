@@ -181,7 +181,7 @@ r8寄存器指向make_fcontext函数的fn参数，在这里就是&context_entry\
 
 所以jump_fcontext(t.fctx, nullptr)会：
 
-+ 保存当前的环境到当前的栈中（请问当前栈是谁的栈？）
++ 保存当前的环境到当前的栈中（请问当前栈是谁的栈？context_entry）
 + 切换到寄存器rdi指向的栈（create_context -> jump_fcontext前半部分）
 + 弹出6个寄存器 + 弹出返回地址
 + 跳转到返回地址（也就是create_context函数）
@@ -193,3 +193,77 @@ r8寄存器指向make_fcontext函数的fn参数，在这里就是&context_entry\
 
 所以，注释是：// jump back to `create_context()`
 
+因为控制流转移到`create_context()`，我们也回到`create_context()`（跟着控制流走）
+
+可以猜测：`resume()`函数的调用会让控制流再次回到`context_entry()`
+
+# 第六步：从context_entry到create_context #
+
+![20](20.jpg)
+
+实际上，我们知道jump_fcontext并不是通过ret指令来返回的（人工恢复栈 + 跳转指令）
+
+并且，这里实际上是context_entry函数执行到一半就“返回”的，我们很难推断出返回值（也就是rax寄存器）是多少
+
+只能去看汇编代码了（哎）：
+
++ 前面说过我们不想静态地看boost_test.s文件
++ 那不就只能动态跟踪？
+
+（我的内心是抗拒的）
+
+再找找办法？
+
+![21](21.jpg)
+
+返回值是谁？rsp寄存器的值
+
+rsp寄存器的值是什么？栈顶指针
+
+谁的栈顶指针？谁调用jump_fcontext函数就是谁的栈顶指针
+
+谁调用jump_fcontext函数？context_entry函数
+
+所以返回值是：一个栈顶指针，指向context_entry -> jump_fcontext前半部分的栈顶
+
+更准确来说：
+
++ 存在这么一个时刻：context_entry函数调用jump_fcontext函数，jump_fcontext把6个寄存器入栈，但还没有进行栈切换
++ 返回值就是这个时刻的栈顶指针
+
+所以：create_context1函数的返回值是，context_entry -> jump_fcontext前半部分的栈顶指针
+
+# 第七步：create_context1返回之后呢？ #
+
+![22](22.jpg)
+
+1. 调用构造函数
+2. 调用resume函数
+
+![23](23.jpg)
+
+构造函数本身非常trivial
+
+![24](24.jpg)
+
+在libgo系列前面的文章中，我们分析过resume函数，在这里只是简单地展示一下
+
+这个函数的作用也不过是调用我们非常熟悉的jump_fcontext函数
+
+这次jump_fcontext将会把控制流转移到什么地方呢？取决于栈顶指针指向哪里
+
+栈顶指针（fctx\_）指向哪里呢？fctx\_等于create\_context1的返回值
+
+create\_context1的返回值是什么呢？context_entry -> jump_fcontext前半部分的栈顶指针
+
+所以jump_fcontext函数会把控制流转移到什么地方呢？context_entry函数
+
+jump_fcontext函数会把控制流转移到context_entry函数的什么地方呢？我们上一次离开的地方
+
+![25](25.jpg)
+
+也就是从`jump_fcontext()`这句话之后开始执行
+
+我们需要留意一下`jump_fcontext()`函数的返回值，也就是变量`t`的值
+
+（好了，该去吃晚饭了）
