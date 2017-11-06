@@ -23,3 +23,5 @@
 [How Boost Context Works](HowBoostContextWorks/HowBoostContextWorks.md)
 
 [Analyse Callcc](AnalyseCallcc/AnalyseCallcc.md)
+
+[Analyse Stack Allocation](AnalyseStackAllocation/AnalyseStackAllocation.md)
