@@ -277,6 +277,133 @@ hostname
 
 当然，以上配置没有包含SPF／DKIM等防伪功能所需的记录
 
+## 安装软件 ##
+
+### MySQL ###
+
+```shell
+apt-get install mysql-server
+service mysql stop
+service mysql start
+mysql -p
+// 初始化密码
+mysql_secure_installation
+```
+
+![18](18.jpg)
+
+`mysql_secure_installation`使得我们的数据库更加安全
+
+#### 创建mail数据库并创建邮件管理员 ####
+
+```mysql
+CREATE DATABASE mail;
+GRANT SELECT, INSERT, UPDATE, DELETE ON mail.* TO 'mail_admin'@'localhost' IDENTIFIED BY 'guessmypassword';
+GRANT SELECT, INSERT, UPDATE, DELETE ON mail.* TO 'mail_admin'@'localhost.localdomain' IDENTIFIED BY 'guessmypassword';
+FLUSH PRIVILEGES;
+```
+
+![19](19.jpg)
+
+#### 虚拟域名表 ####
+
+该表存储的是本地服务器用来接收邮件的域名
+
+```mysql
+use mail;
+CREATE TABLE domains (domain varchar(50) NOT NULL, PRIMARY KEY (domain) );
+```
+
+![20](20.jpg)
+
+![21](21.jpg)
+
+#### 邮件转发表 ####
+
+可以用来转发邮件
+
+```mysql
+CREATE TABLE forwardings (source varchar(80) NOT NULL, destination TEXT NOT NULL, PRIMARY KEY (source) );
+```
+
+![22](22.jpg)
+
+#### 用户表 ####
+
+用来存储用户的账号密码（这里密码使用加密的方式进行存储）
+
+```mysql
+CREATE TABLE users (email varchar(80) NOT NULL, password varchar(20) NOT NULL, PRIMARY KEY (email) );
+```
+
+![23](23.jpg)
+
+#### 传输路径表 ####
+
+传输表可以用来指定邮件的传输路径
+
+```mysql
+CREATE TABLE transport ( domain varchar(128) NOT NULL default '', transport varchar(128) NOT NULL default '', UNIQUE KEY domain (domain) );
+```
+
+![24](24.jpg)
+
+#### 退出以及再登陆 ####
+
+```shell
+exit
+mysql -u root -p
+// 输入密码
+```
+
+```mysql
+show databases;
+use mail;
+show tables;
+```
+
+![25](25.jpg)
+
+数据都还在
+
+### Postfix ###
+
+```shell
+apt-get install postfix
+```
+
+![26](26.jpg)
+
+#### 创建虚拟域名配置 ####
+
+```shell
+vim /etc/postfix/mysql-virtual_domains.cf
+```
+
+```vim
+user = mail_admin
+password = mys123123
+dbname = mail
+query = SELECT domain AS virtual FROM domains WHERE domain='%s'
+hosts = 127.0.0.1
+```
+
+![27](27.jpg)
+
+#### 创建邮件转发配置 ####
+
+```shell
+vim /etc/postfix/mysql-virtual_forwardings.cf
+```
+
+```vim
+user = mail_admin
+password = guestmypassword
+dbname = mail
+query = SELECT destination FROM forwardings WHERE source='%s'
+hosts = 127.0.0.1
+```
+
 
 
 # 总结 #
