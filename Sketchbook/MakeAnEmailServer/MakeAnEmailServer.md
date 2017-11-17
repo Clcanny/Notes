@@ -366,6 +366,18 @@ show tables;
 
 数据都还在
 
+### openssl ###
+
+```shell
+apt-get install openssl
+openssl genrsa -out cakey.pem 2048
+openssl req -new -x509 -key cakey.pem -out cacert.pem
+```
+
+![31](31.jpg)
+
+之后会用到`cacert.pem`
+
 ### Postfix ###
 
 ```shell
@@ -404,7 +416,216 @@ query = SELECT destination FROM forwardings WHERE source='%s'
 hosts = 127.0.0.1
 ```
 
+#### 创建虚拟邮箱配置 ####
 
+```shell
+vim /etc/postfix/mysql-virtual_mailboxes.cf
+```
+
+```vim
+user = mail_admin
+password = guestmypassword
+dbname = mail
+query = SELECT CONCAT(SUBSTRING_INDEX(email,'@',-1),'/',SUBSTRING_INDEX(email,'@',1),'/') FROM users WHERE email='%s'
+hosts = 127.0.0.1
+```
+
+![28](28.jpg)
+
+#### 创建电子邮件与文件映射 ####
+
+```shell
+vim /etc/postfix/mysql-virtual_email2email.cf
+```
+
+```vim
+user = mail_admin
+password = guestmypassword
+dbname = mail
+query = SELECT email FROM users WHERE email='%s'
+hosts = 127.0.0.1
+```
+
+![29](29.jpg)
+
+#### 修改配置文件权限 ####
+
+```shell
+chmod o= /etc/postfix/mysql-virtual_*.cf
+chgrp postfix /etc/postfix/mysql-virtual_*.cf
+```
+
+#### 创建新的用户及用户组 ####
+
+该用户和用户组用来处理邮件，用来处理邮件
+
+所有的虚拟邮箱,都会存在这个用户的`home`目录下
+
+```shell
+groupadd -g 5000 vmail
+useradd -g vmail -u 5000 vmail -d /home/vmail -m
+```
+
+#### 其它配置 ####
+
+```shell
+postconf -e 'myhostname = mail.viviansj520.cn'
+postconf -e 'mydestination = localhost, localhost.localdomain'
+postconf -e 'mynetworks = 127.0.0.0/8'
+postconf -e 'inet_interfaces = all'
+postconf -e 'message_size_limit = 30720000'
+postconf -e 'virtual_alias_domains ='
+postconf -e 'virtual_alias_maps = proxy:mysql:/etc/postfix/mysql-virtual_forwardings.cf, mysql:/etc/postfix/mysql-virtual_email2email.cf'
+postconf -e 'virtual_mailbox_domains = proxy:mysql:/etc/postfix/mysql-virtual_domains.cf'
+postconf -e 'virtual_mailbox_maps = proxy:mysql:/etc/postfix/mysql-virtual_mailboxes.cf'
+postconf -e 'virtual_mailbox_base = /home/vmail'
+postconf -e 'virtual_uid_maps = static:5000'
+postconf -e 'virtual_gid_maps = static:5000'
+postconf -e 'smtpd_sasl_type = dovecot'
+postconf -e 'smtpd_sasl_path = private/auth'
+postconf -e 'smtpd_sasl_auth_enable = yes'
+postconf -e 'broken_sasl_auth_clients = yes'
+postconf -e 'smtpd_sasl_authenticated_header = yes'
+postconf -e 'smtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination'
+postconf -e 'smtpd_use_tls = yes'
+postconf -e 'smtpd_tls_cert_file = /etc/pki/dovecot/certs/dovecot.pem'
+postconf -e 'smtpd_tls_key_file = /etc/pki/dovecot/private/dovecot.pem'
+postconf -e 'virtual_create_maildirsize = yes'
+postconf -e 'virtual_maildir_extended = yes'
+postconf -e 'proxy_read_maps = $local_recipient_maps $mydestination $virtual_alias_maps $virtual_alias_domains $virtual_mailbox_maps $virtual_mailbox_domains $relay_recipient_maps $relay_domains $canonical_maps $sender_canonical_maps $recipient_canonical_maps $relocated_maps $transport_maps $mynetworks $virtual_mailbox_limit_maps'
+postconf -e 'virtual_transport = dovecot'
+postconf -e 'dovecot_destination_recipient_limit = 1'
+```
+
+```shell
+vim /etc/postfix/master.cf
+```
+
+![30](30.jpg)
+
+#### 重启服务 ####
+
+```shell
+/etc/init.d/postfix restart
+```
+
+#### 检测安装结果 ####
+
+```shell
+telnet localhost 25
+ehlo localhost
+```
+
+![34](34.jpg)
+
+### Dovecot ###
+
+```shell
+apt-get install dovecot-core dovecot-common
+apt-get install dovecot-imapd dovecot-pop3d
+```
+
+#### vim /etc/dovecot/dovecot.conf ####
+
+```vim
+protocols = imap pop3
+log_timestamp = "%Y-%m-%d %H:%M:%S "
+mail_location = maildir:/home/vmail/%d/%n/Maildir
+
+ssl_cert = </etc/pki/dovecot/certs/dovecot.pem
+ssl_key = </etc/pki/dovecot/private/dovecot.pem
+
+namespace {
+    type = private
+    separator = .
+    prefix = INBOX.
+    inbox = yes
+}
+
+service auth {
+    unix_listener auth-master {
+        mode = 0600
+        user = vmail
+    }
+
+    unix_listener /var/spool/postfix/private/auth {
+        mode = 0666
+        user = postfix
+        group = postfix
+    }
+
+	user = root
+}
+
+service auth-worker {
+    user = root
+}
+
+protocol lda {
+    log_path = /home/vmail/dovecot-deliver.log
+    auth_socket_path = /var/run/dovecot/auth-master
+    postmaster_address = postmaster@mail.viviansj520.cn
+}
+```
+
+#### vim /etc/dovecot/dovecot-sql.conf.ext ####
+
+Dovecot的职责之一就是验证用户的账号密码，需要与数据库沟通，因而我们还需要创建一个配置文件以让Dovecot与数据库进行交互
+
+```vim
+driver = mysql
+connect = host=127.0.0.1 dbname=mail user=mail_admin password=guestmypassword
+default_pass_scheme = CRYPT
+password_query = SELECT email as user, password FROM users WHERE email='%u';
+```
+
+修改文件所属的用户组以及访问权限
+
+```shell
+chgrp dovecot /etc/dovecot/dovecot-sql.conf.ext
+chmod o= /etc/dovecot/dovecot-sql.conf.ext
+```
+
+#### 拷贝证书 ####
+
+```shell
+mkdir -p /etc/pki/dovecot/private
+mkdir -p /etc/pki/dovecot/certs
+cp cacert.pem /etc/pki/dovecot/certs/dovecot.pem
+cp cacert.pem /etc/pki/dovecot/private/dovecot.pem
+```
+
+#### 重启服务 ####
+
+```shell
+/etc/init.d/dovecot restart
+```
+
+#### 检测安装结果 ####
+
+```shell
+apt-get install telnet
+telnet localhost pop3
+telnet 0.0.0.0 pop3
+```
+
+![32](32.jpg)
+
+![33](33.jpg)
+
+## 创建用户 ##
+
+```shell
+mysql -u root -p
+// 输入密码
+```
+
+```mysq
+USE mail;
+INSERT INTO domains (domain) VALUES ('mail.viviansj520.cn');
+INSERT INTO users (email, password) VALUES ('demons@mail.viviansj520.cn', ENCRYPT('guessmypassword'));
+quit
+```
 
 # 总结 #
 
