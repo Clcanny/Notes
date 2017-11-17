@@ -297,6 +297,7 @@ mysql_secure_installation
 #### 创建mail数据库并创建邮件管理员 ####
 
 ```mysql
+CREATE USER 'mail_admin'@'localhost' IDENTIFIED BY 'guestmypassword';
 CREATE DATABASE mail;
 GRANT SELECT, INSERT, UPDATE, DELETE ON mail.* TO 'mail_admin'@'localhost' IDENTIFIED BY 'guessmypassword';
 GRANT SELECT, INSERT, UPDATE, DELETE ON mail.* TO 'mail_admin'@'localhost.localdomain' IDENTIFIED BY 'guessmypassword';
@@ -376,7 +377,7 @@ openssl req -new -x509 -key cakey.pem -out cacert.pem
 
 ![31](31.jpg)
 
-之后会用到`cacert.pem`
+之后会用到`cakey.pem`和`cacert.pem`
 
 ### Postfix ###
 
@@ -394,7 +395,7 @@ vim /etc/postfix/mysql-virtual_domains.cf
 
 ```vim
 user = mail_admin
-password = mys123123
+password = guestmypassword
 dbname = mail
 query = SELECT domain AS virtual FROM domains WHERE domain='%s'
 hosts = 127.0.0.1
@@ -503,6 +504,14 @@ vim /etc/postfix/master.cf
 
 ![30](30.jpg)
 
+在该文件的末尾增加一行：
+
+```vim
+dovecot unix - n n - - pipe flags=DRhu user=vmail:vmail argv=/usr/lib/dovecot/deliver -d ${recipient}
+```
+
+![35](35.jpg)
+
 #### 重启服务 ####
 
 ```shell
@@ -592,7 +601,7 @@ chmod o= /etc/dovecot/dovecot-sql.conf.ext
 mkdir -p /etc/pki/dovecot/private
 mkdir -p /etc/pki/dovecot/certs
 cp cacert.pem /etc/pki/dovecot/certs/dovecot.pem
-cp cacert.pem /etc/pki/dovecot/private/dovecot.pem
+cp cakey.pem /etc/pki/dovecot/private/dovecot.pem
 ```
 
 #### 重启服务 ####
