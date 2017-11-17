@@ -638,6 +638,6 @@ quit
 
 # 总结 #
 
-感谢[[YusenMeng](http://www.jianshu.com/u/310946dd5bd0)](http://www.jianshu.com/u/310946dd5bd0)的教程[《从零开始邮件服务器搭建》](http://www.jianshu.com/p/610d9bf0ae8b)
+感谢[YusenMeng](http://www.jianshu.com/u/310946dd5bd0)的教程[《从零开始邮件服务器搭建》](http://www.jianshu.com/p/610d9bf0ae8b)
 
 感谢维基百科
