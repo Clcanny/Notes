@@ -396,6 +396,17 @@ show tables;
 apt-get install openssl
 openssl genrsa -out cakey.pem 2048
 openssl req -new -x509 -key cakey.pem -out cacert.pem
+
+// 另一个生成密钥的命令，我不明白这些命令之间的区别
+openssl genrsa -des3 -out server.key 2048
+openssl rsa -in server.key -out server.key.insecure
+mv server.key server.key.secure
+mv server.key.insecure server.key
+openssl req -new -key server.key -out server.csr
+openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
+// 之后会把两份文件拷贝到对应的地方
+cp server.crt /etc/ssl/certs
+cp server.key /etc/ssl/private
 ```
 
 ![31](31.jpg)
@@ -406,6 +417,7 @@ openssl req -new -x509 -key cakey.pem -out cacert.pem
 
 ```shell
 apt-get install postfix
+apt-get install postfix-mysql
 ```
 
 ![26](26.jpg)
@@ -555,6 +567,7 @@ ehlo localhost
 ```shell
 apt-get install dovecot-core dovecot-common
 apt-get install dovecot-imapd dovecot-pop3d
+apt-get install dovecot-mysql
 ```
 
 #### vim /etc/dovecot/dovecot.conf ####
@@ -625,6 +638,10 @@ mkdir -p /etc/pki/dovecot/private
 mkdir -p /etc/pki/dovecot/certs
 cp cacert.pem /etc/pki/dovecot/certs/dovecot.pem
 cp cakey.pem /etc/pki/dovecot/private/dovecot.pem
+
+// 拷贝另一个版本的钥匙
+cp server.crt /etc/pki/dovecot/certs/dovecot.pem
+cp server.key /etc/pki/dovecot/private/dovecot.pem
 ```
 
 #### 重启服务 ####
@@ -662,5 +679,9 @@ quit
 # 总结 #
 
 感谢[YusenMeng](http://www.jianshu.com/u/310946dd5bd0)的教程[《从零开始邮件服务器搭建》](http://www.jianshu.com/p/610d9bf0ae8b)
+
+感谢[stwstw0123](http://my.csdn.net/stwstw0123)的教程[《Ubuntu之邮件服务器(Postfix, Dovecot, MySql)》](http://blog.csdn.net/stwstw0123/article/details/47373183)
+
+感谢[zstack_org](http://my.csdn.net/zstack_org)的教程[《如何利用Postfix、Dovecot、MySQL与SpamAssassin配置一套邮件服务器》](http://blog.csdn.net/zstack_org/article/details/71514332)
 
 感谢维基百科
