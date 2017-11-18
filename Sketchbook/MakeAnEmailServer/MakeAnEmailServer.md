@@ -676,6 +676,30 @@ INSERT INTO users (email, password) VALUES ('demons@mail.viviansj520.cn', ENCRYP
 quit
 ```
 
+# 对实践的修修补补 #
+
+## 不能使用telnet登陆的问题 ##
+
+```shell
+vim /etc/dovecot/conf.d/10-auth.conf
+```
+
+![36](36.jpg)
+
+## 使用telnet登陆 ##
+
+```shell
+telnet mail.viviansj520.cn smtp
+helo test
+auth login
+// 找一个网站把用户名和密码用base64加密
+// 输入加密后的用户名和密码
+```
+
+![37](37.jpg)
+
+可惜用户名和密码不对
+
 # 总结 #
 
 感谢[YusenMeng](http://www.jianshu.com/u/310946dd5bd0)的教程[《从零开始邮件服务器搭建》](http://www.jianshu.com/p/610d9bf0ae8b)
