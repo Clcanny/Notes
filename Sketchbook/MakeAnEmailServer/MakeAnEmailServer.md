@@ -320,7 +320,7 @@ mysql_secure_installation
 #### 创建mail数据库并创建邮件管理员 ####
 
 ```mysql
-CREATE USER 'mail_admin'@'localhost' IDENTIFIED BY 'guestmypassword';
+CREATE USER 'mail_admin'@'localhost' IDENTIFIED BY 'guessmypassword';
 CREATE DATABASE mail;
 GRANT SELECT, INSERT, UPDATE, DELETE ON mail.* TO 'mail_admin'@'localhost' IDENTIFIED BY 'guessmypassword';
 GRANT SELECT, INSERT, UPDATE, DELETE ON mail.* TO 'mail_admin'@'localhost.localdomain' IDENTIFIED BY 'guessmypassword';
@@ -619,7 +619,7 @@ Dovecot的职责之一就是验证用户的账号密码，需要与数据库沟�
 
 ```vim
 driver = mysql
-connect = host=127.0.0.1 dbname=mail user=mail_admin password=guestmypassword
+connect = host=127.0.0.1 dbname=mail user=mail_admin password=guessmypassword
 default_pass_scheme = CRYPT
 password_query = SELECT email as user, password FROM users WHERE email='%u';
 ```
@@ -699,6 +699,62 @@ auth login
 ![37](37.jpg)
 
 可惜用户名和密码不对
+
+## 测试Postfix ##
+
+### 测试Postfix能够找到自己的域 ###
+
+```shell
+postmap -q mail.viviansj520.cn proxy:mysql:/etc/postfix/mysql-virtual_domains.cf
+```
+
+### 测试Posffix能够找到对应的邮箱 ###
+
+```shell
+postmap -q demons@mail.viviansj520.cn proxy:mysql:/etc/postfix/mysql-virtual_mailboxes.cf
+```
+
+在这里我们发现之前的`mysql-virtual_mailboxes.cf`文件有一项写错了，密码不是`guestmypassword`而是`guessmypassword`
+
+重启`Postfix`之后可以看到正确的输出
+
+## Dovecot ##
+
+/etc/dovecot/dovecot.conf
+
+![38](38.jpg)
+
+/etc/dovecot/conf.d/10-mail.conf
+
+![39](39.jpg)
+
+![40](40.jpg)
+
+/etc/dovecot/conf.d/10-auth.conf
+
+![41](41.jpg)
+
+![42](42.jpg)
+
+![43](43.jpg)
+
+![44](44.jpg)
+
+/etc/dovecot/conf.d/auth-sql.conf.ext
+
+![45](45.jpg)
+
+/etc/dovecot/dovecot-sql.conf.ext
+
+![46](46.jpg)
+
+![47](47.jpg)
+
+![48](48.jpg)
+
+![49](49.jpg)
+
+## fuck ##
 
 # 总结 #
 
