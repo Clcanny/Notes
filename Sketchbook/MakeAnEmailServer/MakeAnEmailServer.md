@@ -103,6 +103,29 @@ SPF／DKIM／PTR是做一件事情（防止发件人欺骗）的三个手段
 
 # 原理 #
 
+## 0.0.0.0 vs 127.0.0.1 ##
+
+[What's the difference between 127.0.0.1 and 0.0.0.0?](https://superuser.com/questions/949428/whats-the-difference-between-127-0-0-1-and-0-0-0-0)
+
++ `127.0.0.1` is the loopback address (also known as localhost).
++ `0.0.0.0` is a non-routable meta-address used to designate an invalid, unknown or non applicable target (a no particular address placeholder).
+
+具体到docker的应用场景下（以下是我的理解不保证准确）：
+
++ 外界通过容器所在的机器的IP地址（比如`192.168.0.1`）访问容器内的应用
++ `192.168.0.1:80` -> `0.0.0.0:81`（本机IP被自动映射成`0.0.0.0`，端口映射由用户手动指定）
+
+所以我们可以认为：
+
++ `127.0.0.1`用于在容器中访问容器本身（回环）
++ `0.0.0.0`用于在容器中指定本容器IP地址，让外界访问
+
+所以：我们在下面的配置中，一旦想使用本容器地址，都会照常使用`127.0.0.1`
+
+## OpenSSL vs LetsEncrypt ##
+
+LetsEncrypt is a free certificate authority. OpenSSL is a software package for generating certificates. The LetsEncrypt scripts use OpenSSL to generate certificates and sign them with the LetsEncrypt service.
+
 ## Mail processing model ##
 
 ![1](1.png)
