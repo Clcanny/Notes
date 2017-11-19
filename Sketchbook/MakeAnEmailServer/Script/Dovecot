@@ -1,0 +1,99 @@
+apt-get install dovecot-core  dovecot-mysql
+apt-get install dovecot-imapd dovecot-lmtpd dovecot-pop3d
+
+vim /etc/dovecot/dovecot.conf
+vim /etc/dovecot/dovecot-sql.conf.ext
+
+vim /etc/dovecot/conf.d/10-mail.conf
+mail_location = maildir:/home/vmail/%d/%n/Maildir
+mail_location = maildir:/home/vmail/%d/%n/Maildir
+
+// 创建新的用户以及用户组
+groupadd -g 5000 vmail
+useradd -g vmail -u 5000 vmail -d /home/vmail -m
+
+// 重启以使得配置生效
+/etc/init.d/dovecot restart
+telnet localhost 25
+ehlo test
+quit
+telnet localhost pop3
+quit
+
+// /var/mail是邮件文件的存储路径
+ls -ld /var/mail
+// 为注册在数据库内的每个域创建一个文件夹
+mkdir -p /var/mail/vhosts/mail.viviansj520.cn
+// 删除用户vmail
+userdel vmail
+groupadd -g 5000 vmail
+useradd -g vmail -u 5000 vmail -d /var/mail
+// 改变文件夹的属主
+chown -R vmail:vmail /var/mail
+
+vim /etc/dovecot/conf.d/10-auth.conf
+disable_plaintext_auth = yes
+auth_mechanisms = plain login
+#!include auth-system.conf.ext
+!include auth-sql.conf.ext
+
+vim /etc/dovecot/conf.d/auth-sql.conf.ext
+passdb {
+  driver = sql
+  args = /etc/dovecot/dovecot-sql.conf.ext
+}
+userdb {
+  driver = static
+  args = uid=vmail gid=vmail home=/var/mail/vhosts/%d/%n
+}
+
+vim /etc/dovecot/dovecot-sql.conf.ext
+driver = mysql
+connect = host=127.0.0.1 dbname=mail user=mail_admin password=guessmypassword
+default_pass_scheme = CRYPT
+password_query = SELECT email as user, password FROM users WHERE email='%u';
+
+// 更改文件夹属主
+chown -R vmail:dovecot /etc/dovecot
+chmod -R o-rwx /etc/dovecot 
+
+vim /etc/dovecot/conf.d/10-master.conf
+service imap-login {
+    inet_listener imap {
+        port = 0
+    }
+}
+service lmtp {
+    unix_listener /var/spool/postfix/private/dovecot-lmtp {
+        mode = 0600
+        user = postfix
+        group = postfix
+    }
+} 
+service auth {
+    unix_listener /var/spool/postfix/private/auth {
+        mode = 0666
+        user = postfix
+        group = postfix
+    }
+
+    unix_listener auth-userdb {
+        mode = 0600
+        user = vmail
+    }
+
+    user = dovecot
+}
+service auth-worker {
+    user = vmail
+}
+
+vim /etc/dovecot/conf.d/10-ssl.conf
+ssl = required
+ssl_cert = </etc/ssl/certs/server.crt
+ssl_key = </etc/ssl/private/server.key
+
+// 重启
+/etc/init.d/dovecot restart
+telnet example.com 993
+

@@ -1,0 +1,14 @@
+docker run -t -i --privileged --name mail -p 25:25 -p 110:110 -p 143:143 -p 465:465 -p 587:587 -p 993:993 -p 995:995 debian /bin/bash
+
+hostname mail.viviansj520.cn
+hostname
+
+apt-get update
+apt-get install vim
+
+#include MySQL
+#include OpenSSL
+#include Postfix
+#include Dovecot
+
+openssl s_client -connect mail.viviansj520.cn:993

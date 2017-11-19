@@ -1,0 +1,39 @@
+apt-get install mysql-server mysql-client
+service mysql stop
+service mysql start
+mysql -u root -p
+mysql_secure_installation
+
+// 创建用于邮件管理的数据库用户
+mysql -u root -p
+CREATE USER 'mail_admin'@'localhost' IDENTIFIED BY 'guessmypassword';
+// 验证新创建的用户是否存在
+SELECT User, Host, Password FROM mysql.user;
+quit;
+// 验证新创建的数据库用户的密码是否正确
+mysql -u mail_admin -p
+quit;
+
+// 创建用于邮件管理的数据库
+CREATE DATABASE mail;
+// 把相关权限授予给邮件管理员
+GRANT SELECT, INSERT, UPDATE, DELETE ON mail.* TO 'mail_admin'@'localhost' IDENTIFIED BY 'guessmypassword';
+GRANT SELECT, INSERT, UPDATE, DELETE ON mail.* TO 'mail_admin'@'localhost.localdomain' IDENTIFIED BY 'guessmypassword';
+FLUSH PRIVILEGES;
+
+use mail;
+// 创建虚拟域名表
+CREATE TABLE domains (domain varchar(50) NOT NULL, PRIMARY KEY (domain) );
+// 创建邮件转发表
+CREATE TABLE forwardings (source varchar(80) NOT NULL, destination TEXT NOT NULL, PRIMARY KEY (source) );
+// 创建用户表
+CREATE TABLE users (email varchar(80) NOT NULL, password varchar(20) NOT NULL, PRIMARY KEY (email) );
+// 创建传输路径表
+CREATE TABLE transport ( domain varchar(128) NOT NULL default '', transport varchar(128) NOT NULL default '', UNIQUE KEY domain (domain) );
+// 验证表创建操作都已被持久化
+quit;
+mysql -u root -p
+show databases;
+use mail;
+show tables;
+quit;

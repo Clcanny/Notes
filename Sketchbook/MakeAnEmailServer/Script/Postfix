@@ -1,0 +1,97 @@
+// 2. Internet Site
+// mail.viviansj520.cn
+apt-get install postfix postfix-mysql
+
+// 配置密钥所在路径
+postconf -e 'smtpd_use_tls = yes'
+postconf -e 'smtpd_tls_cert_file = /etc/ssl/certs/server.crt'
+postconf -e 'smtpd_tls_key_file = /etc/ssl/private/server.key'
+
+postconf -e 'virtual_alias_domains ='
+// 配置转发表
+postconf -e 'virtual_alias_maps = proxy:mysql:/etc/postfix/mysql-virtual_forwardings.cf, mysql:/etc/postfix/mysql-virtual_email2email.cf'
+// 配置虚拟域
+postconf -e 'virtual_mailbox_domains = proxy:mysql:/etc/postfix/mysql-virtual_domains.cf'
+// 配置用户表
+postconf -e 'virtual_mailbox_maps = proxy:mysql:/etc/postfix/mysql-virtual_mailboxes.cf'
+
+postconf -e 'myhostname = mail.viviansj520.cn'
+postconf -e 'mydestination = localhost, localhost.localdomain'
+postconf -e 'mynetworks = 127.0.0.0/8'
+postconf -e 'inet_interfaces = all'
+postconf -e 'message_size_limit = 30720000'
+
+postconf -e 'virtual_mailbox_base = /home/vmail'
+postconf -e 'virtual_uid_maps = static:5000'
+postconf -e 'virtual_gid_maps = static:5000'
+
+postconf -e 'smtpd_sasl_type = dovecot'
+postconf -e 'smtpd_sasl_path = private/auth'
+postconf -e 'smtpd_sasl_auth_enable = yes'
+postconf -e 'broken_sasl_auth_clients = yes'
+postconf -e 'smtpd_sasl_authenticated_header = yes'
+postconf -e 'smtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination'
+
+postconf -e 'virtual_create_maildirsize = yes'
+postconf -e 'virtual_maildir_extended = yes'
+postconf -e 'proxy_read_maps = $local_recipient_maps $mydestination $virtual_alias_maps $virtual_alias_domains $virtual_mailbox_maps $virtual_mailbox_domains $relay_recipient_maps $relay_domains $canonical_maps $sender_canonical_maps $recipient_canonical_maps $relocated_maps $transport_maps $mynetworks $virtual_mailbox_limit_maps'
+postconf -e 'virtual_transport = dovecot'
+postconf -e 'dovecot_destination_recipient_limit = 1'
+
+vim /etc/postfix/master.cf
+// 反注释一部分代码，打开465号端口和587号端口
+// 在文件的最后增加
+dovecot unix - n n - - pipe flags=DRhu user=vmail:vmail argv=/usr/lib/dovecot/deliver -d ${recipient}
+
+vim /etc/postfix/mysql-virtual_domains.cf
+user = mail_admin
+password = guessmypassword
+dbname = mail
+query = SELECT domain AS virtual FROM domains WHERE domain='%s'
+hosts = 127.0.0.1
+
+vim /etc/postfix/mysql-virtual_forwardings.cf
+user = mail_admin
+password = guessmypassword
+dbname = mail
+query = SELECT destination FROM forwardings WHERE source='%s'
+hosts = 127.0.0.1
+
+vim /etc/postfix/mysql-virtual_mailboxes.cf
+user = mail_admin
+password = guestmypassword
+dbname = mail
+query = SELECT CONCAT(SUBSTRING_INDEX(email,'@',-1),'/',SUBSTRING_INDEX(email,'@',1),'/') FROM users WHERE email='%s'
+hosts = 127.0.0.1
+
+vim /etc/postfix/mysql-virtual_email2email.cf
+user = mail_admin
+password = guestmypassword
+dbname = mail
+query = SELECT email FROM users WHERE email='%s'
+hosts = 127.0.0.1
+
+// 在数据库中插入数据以测试配置文件是否生效
+mysql -u root -p
+use mail;
+INSERT INTO domains (domain) VALUES ('mail.viviansj520.cn');
+INSERT INTO users (email, password) VALUES ('demons@mail.viviansj520.cn', ENCRYPT('guessmypassword'));
+quit;
+
+// 重启以使得配置生效
+/etc/init.d/postfix restart
+// 测试Postfix能否找到自己的域
+postmap -q mail.viviansj520.cn proxy:mysql:/etc/postfix/mysql-virtual_domains.cf
+// 测试Posffix能否找到对应的邮箱
+postmap -q demons@mail.viviansj520.cn proxy:mysql:/etc/postfix/mysql-virtual_mailboxes.cf
+
+// 进一步测试
+apt-get install telnet
+telnet localhost 25
+quit
+telnet localhost 465
+quit
+telnet localhost 587
+ehlo localhost
+ehlo test
+quit
