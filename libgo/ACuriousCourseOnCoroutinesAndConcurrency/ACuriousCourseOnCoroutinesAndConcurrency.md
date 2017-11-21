@@ -161,7 +161,7 @@ Can be caught/handled in the usual ways.
 + Coroutines are consumers of data.
 + To keep your brain from exploding, you don't mix the two concepts together.
 + Coroutines are not related to iteration.
-+ Note :There is a use of having yield produce a value in a coroutine, but it's not tied to iteration.
++ Note: There is a use of having yield produce a value in a coroutine, but it's not tied to iteration.
 
 ## Coroutines, Pipelines, and Dataflow ##
 
