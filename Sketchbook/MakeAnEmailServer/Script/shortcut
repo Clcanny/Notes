@@ -1,0 +1,14 @@
+docker pull tvial/docker-mailserver:latest
+
+mkdir -p config
+touch config/postfix-accounts.cf
+
+docker run --rm \
+  -e MAIL_USER=demons@mail.viviansj520.cn \
+  -e MAIL_PASS=guessmypassword \
+  -ti tvial/docker-mailserver:latest \
+  /bin/sh -c 'echo "$MAIL_USER|$(doveadm pw -s SHA512-CRYPT -u $MAIL_USER -p $MAIL_PASS)"' >> config/postfix-accounts.cfdocker pull tvial/docker-mailserver:latest
+
+docker run --rm \
+  -v "$(pwd)/config":/tmp/docker-mailserver \
+  -ti tvial/docker-mailserver:latest generate-dkim-domain mail.viviansj520.cn
