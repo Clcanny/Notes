@@ -59,14 +59,14 @@ hosts = 127.0.0.1
 
 vim /etc/postfix/mysql-virtual_mailboxes.cf
 user = mail_admin
-password = guestmypassword
+password = guessmypassword
 dbname = mail
 query = SELECT CONCAT(SUBSTRING_INDEX(email,'@',-1),'/',SUBSTRING_INDEX(email,'@',1),'/') FROM users WHERE email='%s'
 hosts = 127.0.0.1
 
 vim /etc/postfix/mysql-virtual_email2email.cf
 user = mail_admin
-password = guestmypassword
+password = guessmypassword
 dbname = mail
 query = SELECT email FROM users WHERE email='%s'
 hosts = 127.0.0.1
@@ -76,6 +76,7 @@ mysql -u root -p
 use mail;
 INSERT INTO domains (domain) VALUES ('mail.viviansj520.cn');
 INSERT INTO users (email, password) VALUES ('demons@mail.viviansj520.cn', ENCRYPT('guessmypassword'));
+INSERT INTO users (email, password) VALUES ('charles@mail.viviansj520.cn', 'guessmypassword');
 quit;
 
 // 重启以使得配置生效

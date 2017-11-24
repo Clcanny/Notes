@@ -12,3 +12,5 @@ apt-get install vim
 #include Dovecot
 
 openssl s_client -connect mail.viviansj520.cn:993
+a login "charles@mail.viviansj520.cn" "guessmypassword"
+e logout
