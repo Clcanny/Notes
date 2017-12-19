@@ -8,14 +8,14 @@ interactWith function inputFile outputFile = do
 
 splitLines [] = []
 splitLines cs = pre : splitSuf
-    where (pre, suf) = break isLineTerminator cs
-          splitSuf = splitLines (deleteEnter suf)
-          isLineTerminator c = c == '\r' || c == '\n'
-
-deleteEnter ('\r':'\n':rest) = rest
-deleteEnter ('\r':rest) = rest
-deleteEnter ('\n':rest) = rest
-deleteEnter all = all
+  where (pre, suf) = break isLineTerminator cs
+        splitSuf = splitLines (deleteEnter suf)
+        isLineTerminator c = c == '\r' || c == '\n'
+        deleteEnter input = case input of
+          ('\r':'\n':rest) -> rest
+          ('\r':rest) -> rest
+          ('\n':rest) -> rest
+          all -> all
 
 main = mainWith (\x -> concat $ splitLines x)
   where mainWith function = do
