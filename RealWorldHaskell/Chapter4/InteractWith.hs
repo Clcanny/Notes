@@ -17,7 +17,7 @@ splitLines cs = pre : splitSuf
           ('\n':rest) -> rest
           all -> all
 
-main = mainWith (\x -> concat $ splitLines x)
+main = mainWith (\x -> unlines $ splitLines x)
   where mainWith function = do
           args <- getArgs
           case args of
