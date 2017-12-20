@@ -17,9 +17,18 @@ splitLines cs = pre : splitSuf
           ('\n':rest) -> rest
           all -> all
 
-main = mainWith (\x -> unlines $ splitLines x)
+main = mainWith (\x -> unlines $ getFirstWordsA x)
   where mainWith function = do
           args <- getArgs
           case args of
             [input, output] -> interactWith function input output
             _ -> putStrLn "error: exactly two arguments needed"
+
+getFirstWords str = firstWords
+  where lines = splitLines str
+        firstWords = getFirstWords' lines
+        getFirstWords' lines = case lines of
+          [] -> []
+          (x:xs) -> (head (words x)):(getFirstWords' xs)
+
+getFirstWordsA = map head . map words . splitLines

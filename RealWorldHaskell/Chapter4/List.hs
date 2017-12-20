@@ -1,55 +1,68 @@
-import Prelude hiding (length, null, (++), concat, all, any, and, or, reverse, splitAt, take, drop, head, tail, last, init)
+import Prelude hiding (length, null, (++), concat, all, any, and, or, reverse, splitAt, take, drop, head, tail, last, init, words, lines)
 
-data List a = Cons a (List a)
-              | Nil
-                deriving (Show)
+length [] = 0
+length (x:xs) = length xs + 1
 
-fromList [] = Nil
-fromList (x:xs) = Cons x (fromList xs)
-
-toList Nil = []
-toList (Cons x xs) = x : (toList xs)
-
-length Nil = 0
-length (Cons x xs) = length xs + 1
-
-null Nil = True
+null [] = True
 null _ = False
 
-(++) Nil ys = ys
-(++) (Cons x xs) ys = Cons x (xs ++ ys)
+(++) [] ys = ys
+(++) (x:xs) ys = x:(xs ++ ys)
 
-concat Nil = Nil
-concat (Cons x xs) = x ++ (concat xs)
+concat [] = []
+concat (x:xs) = x ++ (concat xs)
 
-all f Nil = True
-all f (Cons x xs) = (f x) && (all f xs)
+all f [] = True
+all f (x:xs) = (f x) && (all f xs)
 
-any f Nil = False
-any f (Cons x xs) = (f x) || (any f xs)
+any f [] = False
+any f (x:xs) = (f x) || (any f xs)
 
 and xs = all id xs
 
 or xs = any id xs
 
-reverse Nil = Nil
-reverse (Cons x xs) = (reverse xs) ++ (Cons x Nil)
+reverse [] = []
+reverse (x:xs) = (reverse xs) ++ [x]
 
-splitAt n _
-    | n <= 0 = (Nil, Nil)
-splitAt _ Nil = (Nil, Nil)
-splitAt n (Cons x xs) = (Cons x first, second)
+splitAt n xs
+    | n < 0 = ([], [])
+    | n == 0 = ([], xs)
+splitAt _ [] = ([], [])
+splitAt n (x:xs) = (x:first, second)
   where (first, second) = splitAt (n - 1) xs
 
 take n xs = fst (splitAt n xs)
 
 drop n xs = snd (splitAt n xs)
 
-head (Cons x xs) = x
-head Nil = error ""
+head [] = error ""
+head (x:xs) = x
 
 tail xs = drop 1 xs
 
 last xs = head (reverse xs)
 
 init xs = reverse (tail (reverse xs))
+
+safeHead [] = Nothing
+safeHead xs = Just (head xs)
+
+safeTail [] = Nothing
+safeTail xs = Just (tail xs)
+
+safeLast [] = Nothing
+safeLast xs = Just (head xs)
+
+safeInit [] = Nothing
+safeInit xs = Just (init xs)
+
+splitWith pred (x:xs)
+  | pred x = splitWith pred xs
+  | otherwise = first:(splitWith pred rest)
+      where (first, rest) = break pred (x:xs)
+splitWith _ [] = []
+
+words = splitWith (\x -> x == ' ' || x == ',' || x == ';')
+
+lines = splitWith (\x -> x == '\r' || x == '\n')
