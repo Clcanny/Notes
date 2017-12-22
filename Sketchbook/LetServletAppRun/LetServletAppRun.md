@@ -64,7 +64,7 @@ tomcat
 因为`tomcat`镜像不具备编译代码需要的软件，我们需要下载对应的包
 
 ```shell
-apt-get udpate
+apt-get update
 apt-get install openjdk-8-jdk
 ```
 
