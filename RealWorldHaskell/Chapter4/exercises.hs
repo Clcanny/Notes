@@ -1,6 +1,6 @@
 import Data.Char (digitToInt, isDigit)
 import Data.List (foldl')
-import Prelude hiding (takeWhile, any)
+import Prelude hiding (takeWhile, any, cycle)
 
 asIntMaybe :: String -> Maybe Int
 asIntMaybe ('-':str) = case (asIntMaybe str) of
@@ -34,3 +34,8 @@ takeWhile cond xs = foldr step [] xs
 
 any cond xs = foldr step False xs
   where step x zero = (cond x) || zero
+
+cycle input = foldr step [] [input]
+  where
+    step [] _ = foldr step [] [input]
+    step (x:xs) acc = x:(step xs acc)
