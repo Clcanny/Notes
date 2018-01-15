@@ -233,16 +233,15 @@ mkdir /data
 
 # 使用`Dockerfile` #
 
-[Dockerfile](webdav/Dockerfile)
+[Dockerfile](Docker/Dockerfile)
 
-[webdav.conf](webdav/webdav.conf)
+[webdav.conf](Docker/webdav.conf)
 
-[entrypoint.sh](webdav/entrypoint.sh)
+[entrypoint.sh](Docker/entrypoint.sh)
 
-[sources.list](webdav/sources.list)
+[sources.list](Docker/sources.list)
 
 ```shell
-docker build -t webdav2 .
-docker run -t -i -p 80:80 -p 443:443 -v ~/mycloud:/data -e USERNAME=username -e PASSWORD=password --name webdav2 webdav:2
+docker build -t webdav:latest .
+docker run -t -i -p 80:80 -p 443:443 -v ~/mycloud:/data -e USERNAME=username -e PASSWORD=password --name webdav webdav:latest
 ```
-
