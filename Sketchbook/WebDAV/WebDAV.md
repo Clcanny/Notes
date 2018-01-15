@@ -245,3 +245,28 @@ mkdir /data
 docker build -t webdav:latest .
 docker run -t -i -p 80:80 -p 443:443 -v ~/mycloud:/data -e USERNAME=username -e PASSWORD=password --name webdav webdav:latest
 ```
+
+# 替代方案 #
+
+## 证书 ##
+
+太过频繁地申请`SSL`证书把我们的`Let'sEncrypt`搞崩了，所以只能想想其它办法
+
+好在腾讯云也可以帮我们申请证书
+
+![16](16.jpg)
+
+下载到服务器上，放到指定的文件夹（查看`NGINX`的配置文件）也可以起到相同的效果
+
+## 文件存储服务 ##
+
+![17](17.jpg)
+
+![18](18.jpg)
+
+这个文件存储服务的价格极其便宜，比市面上的存储服务要便宜非常多
+
+如果使用文件存储服务，挂载关系大概是这样的：
+
++ 宿主机的`mycloud`文件夹挂载文件存储
++ 容器使用`mycloud:/data`的数据卷映射
