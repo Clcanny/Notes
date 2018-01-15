@@ -250,7 +250,7 @@ docker run -t -i -p 80:80 -p 443:443 -v ~/mycloud:/data -e USERNAME=username -e 
 
 ## 证书 ##
 
-太过频繁地申请`SSL`证书把我们的`Let'sEncrypt`搞崩了，所以只能想想其它办法
+太过频繁地申请`SSL`证书把我们的`Let's Encrypt`搞崩了，所以只能想想其它办法
 
 好在腾讯云也可以帮我们申请证书
 
@@ -268,5 +268,5 @@ docker run -t -i -p 80:80 -p 443:443 -v ~/mycloud:/data -e USERNAME=username -e 
 
 如果使用文件存储服务，挂载关系大概是这样的：
 
-+ 宿主机的`mycloud`文件夹挂载文件存储
++ 宿主机的`mycloud`文件夹挂载文件存储服务提供的磁盘空间
 + 容器使用`mycloud:/data`的数据卷映射
