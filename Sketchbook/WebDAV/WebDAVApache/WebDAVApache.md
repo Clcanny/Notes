@@ -270,6 +270,6 @@ BINGO!!!
 
 ```shell
 docker build -t webdav .
-docker run -t -i -p 443:443 -e USERNAME=837940593 -v ~/MyCloud:/var/www/webdav webdav
+docker run -t -i -p 443:443 -e USERNAME=837940593 -v ~/MyCloud:/var/www/webdav --restart=always --name webdav webdav
 ```
 
