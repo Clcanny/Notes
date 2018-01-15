@@ -273,7 +273,7 @@ docker build -t webdav .
 docker run -t -i -p 443:443 -e USERNAME=837940593 -v ~/MyCloud:/var/www/webdav --restart=always --name webdav webdav
 ```
 
-更多文件请参考`Docker`文件夹下的文件（把`apache.crt`和`apache.key`文件替换成自己的）
+更多文件请参考`Docker`文件夹下的文件（把`apache.crt`文件和`apache.key`文件替换成自己的）
 
 # 客户端呢 #
 
