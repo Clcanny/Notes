@@ -300,3 +300,14 @@ docker run -t -i -p 443:443 -e USERNAME=837940593 -v ~/MyCloud:/var/www/webdav -
 + 密码
 
 操作十分简单，因此不演示
+
+# 致谢 #
+
++ 首先需要感谢文章写作中参考的两篇文章（都来自于`DigitalOcean`）
+  + [How To Configure WebDAV Access with Apache on Ubuntu 14.04](https://www.digitalocean.com/community/tutorials/how-to-configure-webdav-access-with-apache-on-ubuntu-14-04)
+  + [How To Create a SSL Certificate on Apache for Ubuntu 14.04](https://www.digitalocean.com/community/tutorials/how-to-create-a-ssl-certificate-on-apache-for-ubuntu-14-04)
++ 其次需要感谢服务端使用的三款开源软件（包括上一篇文章）
+  + [NGINX](https://www.nginx.com)
+  + [The Apache HTTP Server Project](https://httpd.apache.org)
+  + [Let’s Encrypt](https://letsencrypt.org)
++ 最后需要感谢`Boxcryptor`免费为我们提供两个客户端
