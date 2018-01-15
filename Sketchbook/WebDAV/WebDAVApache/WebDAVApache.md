@@ -273,3 +273,30 @@ docker build -t webdav .
 docker run -t -i -p 443:443 -e USERNAME=837940593 -v ~/MyCloud:/var/www/webdav --restart=always --name webdav webdav
 ```
 
+更多文件请参考`Docker`文件夹下的文件（把`apache.crt`和`apache.crt`文件替换成自己的）
+
+# 客户端呢 #
+
+## MacOS ##
+
++ 挂载硬盘
++ 使用端到端加密软件
+
+![19](19.jpg)
+
+![20](20.jpg)
+
+效果非常棒：
+
++ 客户端加密，即使服务器不可信也不会影响隐私性
++ 完全可以当成`Finder`中的一个文件夹来使用（除了：删除的文件不会到废纸篓）
+
+## iOS ##
+
+同款软件，且操作更为简单，只需要填写：
+
++ 服务器地址
++ 用户名
++ 密码
+
+操作十分简单，因此不演示
