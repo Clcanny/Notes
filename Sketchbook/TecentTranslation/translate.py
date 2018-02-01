@@ -17,36 +17,67 @@ global_payload["SecretId"] = secretId
 global_payload["SignatureMethod"] = "HmacSHA256"
 global_payload["Timestamp"] = int(time.time())
 
-def concat(dictionary):
+
+gkeys = []
+gkeys.append("Action")
+gkeys.append("Nonce")
+gkeys.append("Region")
+gkeys.append("SecretId")
+gkeys.append("SignatureMethod")
+gkeys.append("Timestamp")
+
+gvalues = []
+gvalues.append("TextTranslate")
+gvalues.append(random.randint(1, 512))
+gvalues.append("gz")
+gvalues.append(secretId)
+gvalues.append("HmacSHA256")
+gvalues.append(int(time.time()))
+
+def concat(keys, values):
     s = ""
-    for key, value in dictionary.items():
-        s += key.replace("_", ".")
+    size = len(keys)
+    for i in range(size):
+        s += keys[i].replace("_", ".")
         s += "="
-        s += str(value)
+        s += str(values[i])
         s += "&"
     s = s[:-1]
     return s
 
-def readySignature(dictionary):
-    dictionary["Timestamp"] = int(time.time())
-    dictionary["Nonce"] = random.randint(1, 512)
-    return "GETtmt.api.qcloud.com/v2/index.php?" + concat(dictionary)
+def readySignature(keys, values):
+    return "GETtmt.api.qcloud.com/v2/index.php?" + concat(keys, values)
 
-def signature(dictionary):
-    digest = hmac.new(bytes(secretKey, "utf-8"), msg=bytes(readySignature(dictionary), "utf-8"), digestmod=hashlib.sha256).digest()
+def signature(keys, values):
+    digest = hmac.new(bytes(secretKey, "utf-8"), msg=bytes(readySignature(keys, values), "utf-8"), digestmod=hashlib.sha256).digest()
     signature = base64.b64encode(digest)
     return signature
 
 def translate(source, target, sourceText):
-    payload = dict(global_payload)
-    payload["source"] = source
-    payload["sourceText"] = sourceText
-    payload["target"] = target
-    payload["Signature"] = signature(payload)
+    keys = gkeys[:]
+    keys.append("source")
+    keys.append("sourceText")
+    keys.append("target")
+    assert(keys[1] == "Nonce")
+    assert(keys[5] == "Timestamp")
+
+    values = gvalues[:]
+    values.append(source)
+    values.append(sourceText)
+    values.append(target)
+    values[1] = random.randint(1, 512)
+    values[5] = int(time.time())
+
+    payload = {}
+    size = len(keys)
+    for i in range(size):
+        payload[keys[i]] = values[i]
+    payload["Signature"] = signature(keys, values)
+
     r = requests.get('https://tmt.api.qcloud.com/v2/index.php', params = payload)
-    return r
+    return r.text
 
 r = translate("zh", "en", "你好")
-print(r.text)
+print(r)
 r = translate("en", "zh", "Hello, my babe!")
-print(r.text)
+print(r)
