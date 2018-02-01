@@ -1,6 +1,9 @@
+# -*- coding: utf-8 -*-
+
 import requests
 import time
 import random
+import sys
 
 import hmac
 import hashlib
@@ -40,7 +43,10 @@ def readySignature(keys, values):
     return 'GETtmt.api.qcloud.com/v2/index.php?' + concat(keys, values)
 
 def signature(keys, values):
-    digest = hmac.new(bytes(secretKey, 'utf-8'), msg=bytes(readySignature(keys, values), 'utf-8'), digestmod=hashlib.sha256).digest()
+    if sys.version_info[0] < 3:
+        digest = hmac.new(bytes(secretKey), msg=bytes(readySignature(keys, values)), digestmod=hashlib.sha256).digest()
+    else:
+        digest = hmac.new(bytes(secretKey, 'utf-8'), msg=bytes(readySignature(keys, values), 'utf-8'), digestmod=hashlib.sha256).digest()
     signature = base64.b64encode(digest)
     return signature
 
