@@ -62,6 +62,7 @@ def concat(dictionary):
         s += "&"
     s = s[:-1]
     return s
+
 concat(orderedDictionary)
 ```
 
@@ -74,6 +75,7 @@ concat(orderedDictionary)
 ```python
 def readySignature(dictionary):
     return "GEThttps://tmt.api.qcloud.com/v2/index.php?" + concat(dictionary)
+
 readySignature(orderedDictionary)
 ```
 
