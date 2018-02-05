@@ -36,7 +36,7 @@ docker ps
 # 让容器支持SSH #
 
 ```shell
-apt-get install ssh
+apt-get install ssh # 这个命令可要可不要
 apt-get install openssh-server
 cat /etc/ssh/sshd_config
 service ssh restart
@@ -170,6 +170,14 @@ print(cv2.add(x,y))
 ![22](22.jpg)
 
 你问我资不资瓷？当然是资瓷啊！
+
+# 思考题 #
+
+1. 如果下一次需要使用不同的环境（比如安装不同的包或者使用特定版本的`Python`），也需要不断重复步骤三吗？
+2. （恭喜你，答对了，不需要不断重复步骤三）所以应该怎么办呢？
+3. 请问镜像和容器的关系是怎么样的？如何启动容器？如何构建镜像？
+4. 看懂别人写的`Dockerfile`：[janza/docker-python3-opencv](https://github.com/janza/docker-python3-opencv)
+5. 自己写一个`Dockerfile`
 
 # 表白 #
 
