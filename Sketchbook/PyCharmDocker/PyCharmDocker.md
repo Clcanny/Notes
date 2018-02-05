@@ -22,7 +22,7 @@ docker pull jjanzic/docker-python3-opencv
 
 注意两个事情：
 
-+ 数据卷挂载：保证容器内的文件和宿主机上的文件时同步的，我们也懒得管`PyCharm`到底用的是容器内的文件还是宿主机的文件（有兴趣的话可以自行探索）
++ 数据卷挂载：保证容器内的文件和宿主机上的文件是同步的，我们也懒得管`PyCharm`到底用的是容器内的文件还是宿主机的文件（有兴趣的话可以自行探索）
 + 端口映射：保证`PyCharm`可以通过`SSH`连接到容器
 
 ```shell
@@ -60,9 +60,11 @@ service ssh restart
 ```shell
 ssh root@localhost -p 520
 # The password is ``screencast``.
-# 成功登陆？
+# 成功登录？
 exit
 ```
+
+怎么可能成功登录？永远都不可能成功登录的（我是从哪里学到这种骚话的啊）
 
 ![5](5.jpg)
 
@@ -119,9 +121,9 @@ docker rm -f opencv_python
 docker run -t -i --rm -p 520:22 -v /Users/demons/Documents/tmpData:/Users/demons/Documents/tmpData --name opencv_python jjanzic/docker-python3-opencv /bin/bash
 ```
 
-然后前面的步骤三《让容器支持SSH》再来一遍即可（说得一点也不浪费时间）
+然后前面的步骤三《让容器支持SSH》再来一遍即可（说的一点也不浪费时间）
 
-（如果出现`WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!`类似错误，相信你知道怎么解决）
+（如果出现`WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!`的类似错误，相信你知道怎么解决）
 
 ![14](14.jpg)
 
@@ -130,6 +132,8 @@ docker run -t -i --rm -p 520:22 -v /Users/demons/Documents/tmpData:/Users/demons
 # 还剩一点小配置 #
 
 注意到我们在`IDE`中还要配置`Python`在容器中的位置，默认配置是不对的（至少不能使用`Python3`）
+
+不如到容器中找一下`Python`在哪里（`whereis`命令）：
 
 ![16](16.jpg)
 
