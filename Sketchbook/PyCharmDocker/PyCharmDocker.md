@@ -178,6 +178,7 @@ print(cv2.add(x,y))
 3. 请问镜像和容器的关系是怎么样的？如何启动容器？如何构建镜像？
 4. 看懂别人写的`Dockerfile`：[janza/docker-python3-opencv](https://github.com/janza/docker-python3-opencv)
 5. 自己写一个`Dockerfile`
+6. 写这篇文章的人帅不帅？（不接受否定的回答）
 
 # 表白 #
 
