@@ -10,6 +10,7 @@ public class LoveuController {
     @GetMapping("/")
     @ResponseBody
     public String sayLoveu() {
+        Thread.dumpStack();
         return "Loveu!";
     }
 }
