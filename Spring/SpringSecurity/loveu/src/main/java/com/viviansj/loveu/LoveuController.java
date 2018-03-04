@@ -7,10 +7,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class LoveuController {
 
-    @GetMapping("/")
+    @GetMapping("/hello")
     @ResponseBody
-    public String sayLoveu() {
-        Thread.dumpStack();
-        return "Loveu!";
+    public String sayHello() {
+        return "Hello!";
+    }
+
+    @GetMapping("/hi")
+    @ResponseBody
+    public String sayHi() {
+        return "Hi!";
     }
 }

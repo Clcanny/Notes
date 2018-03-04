@@ -1,6 +1,5 @@
 package com.viviansj.loveu;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -16,15 +15,17 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         http
                 .csrf().disable()
                 .authorizeRequests()
-                .antMatchers("/").authenticated()
+                .antMatchers("/hello").authenticated()
                 .and()
                 .formLogin().permitAll();
     }
 
-    @Autowired
-    public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
-        auth
-                .inMemoryAuthentication()
-                .withUser("user").password("{noop}password").roles("USER");
+    @Override
+    public void configure(AuthenticationManagerBuilder builder) throws Exception {
+        builder.inMemoryAuthentication()
+                .withUser("demons")
+                .password("{noop}password")
+                .roles("USER");
     }
+
 }
