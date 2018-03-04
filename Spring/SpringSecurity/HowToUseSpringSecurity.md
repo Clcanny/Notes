@@ -257,6 +257,12 @@ public interface AuthenticationProvider {
 
 ![15](15.jpeg)
 
+`Spring Security`的[实现](https://github.com/spring-projects/spring-security/blob/master/core/src/main/java/org/springframework/security/authentication/ProviderManager.java)与我们猜的差不多，以下展示一些关键代码：
+
+![19](19.jpg)
+
+![20](20.jpg)
+
 > Sometimes an application has logical groups of protected resources (e.g. all web resources that match a path pattern /api/**), and each group can have its own dedicated AuthenticationManager. Often, each of those is a ProviderManager, and they share a parent. The parent is then a kind of "global" resource, acting as a fallback for all providers.
 
 ![16](16.png)
