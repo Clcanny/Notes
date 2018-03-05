@@ -540,6 +540,38 @@ int vote(Authentication authentication, S object,
 
 `Spring Security`的实现方式果然是过滤器（或者说是请求拦截器？）
 
+![30](30.png)
+
+> The client sends a request to the app, and the container decides which filters and which servlet apply to it based on the path of the request URI. At most one servlet can handle a single request, but filters form a chain, so they are ordered, and in fact a filter can veto the rest of the chain if it wants to handle the request itself. A filter can also modify the request and/or the response used in the downstream filters and servlet.
+
+当客户发起一个请求，容器（此容器非`Docker`容器，而应该指的是`Tomcat`容器）会去决定用什么样的过滤器和什么样的`servlet`；过滤器和`servlet`往往会组成一条链表，位于前面的节点可以彻底拦截或者修改请求，所以过滤器的顺序相当重要
+
+> The order of the filter chain is very important, and Spring Boot manages it through 2 mechanisms: one is that @Beans of type Filter can have an @Order or implement Ordered, and the other is that they can be part of a FilterRegistrationBean that itself has an order as part of its API. Some off-the-shelf filters define their own constants to help signal what order they like to be in relative to each other (e.g. the SessionRepositoryFilter from Spring Session has a DEFAULT_ORDER of Integer.MIN_VALUE + 50, which tells us it likes to be early in the chain, but it doesn’t rule out other filters coming before it).
+
+![31](31.jpeg)
+
+一般而言，每一个过滤器都会给定一个优先级；一个很较高的优先级会告诉我们这个过滤器会出现在链表的前部，但它无法阻止其它节点排在它的前面
+
+> Spring Security is installed as a single Filter in the chain, and its concerete type is FilterChainProxy, for reasons that will become apparent soon. In a Spring Boot app the security filter is a @Bean in the ApplicationContext, and it is installed by default so that it is applied to every request.
+
+`Spring Security`在链表中是一个（强调一下这个“一个”）单独的节点，具体的类型是`FilterChainProxy`
+
+> It is installed at a position defined by SecurityProperties.DEFAULT_FILTER_ORDER, which in turn is anchored by FilterRegistrationBean.REQUEST_WRAPPER_FILTER_MAX_ORDER (the maximum order that a Spring Boot app expects filters to have if they wrap the request, modifying its behaviour). 
+
+对于代表`Spring Security`的节点具体被安装在链表的什么位置，我们就不太管了（放弃这些细节吧）
+
+> There’s more to it than that though: from the point of view of the container Spring Security is a single filter, but inside it there are additional filters, each playing a special role. Here’s a picture:
+
+从容器的视角看，整个`Spring Security`是作为一个节点（再次强调一下这个“一个”）被安装进链表的；但是从`Spring Security`的角度看，这个节点由更多的节点构成（我们都可以猜到是用委托来实现的）
+
+![32](32.png)
+
+> Spring Security is a single physical Filter but delegates processing to a chain of internal filters.
+
+果然是通过委托来实现的（`Spring Security`还真是特别喜欢这种设计模式啊）
+
+
+
 [](https://zhuanlan.zhihu.com/p/32952727)
 
 [](http://blog.leapoahead.com/2015/09/06/understanding-jwt/)
