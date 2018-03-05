@@ -12,12 +12,10 @@ public class SimpleAccessDecisionVoter implements AccessDecisionVoter {
     int ACCESS_ABSTAIN = 0;
     int ACCESS_DENIED = 1;
 
-    @Override
     public boolean supports(ConfigAttribute configAttribute) {
         return true;
     }
 
-    @Override
     public int vote(Authentication authentication, Object o, Collection attributes) {
         System.out.println(o.getClass());
         System.out.println(o);
@@ -28,7 +26,6 @@ public class SimpleAccessDecisionVoter implements AccessDecisionVoter {
         return ACCESS_GRANTED;
     }
 
-    @Override
     public boolean supports(Class aClass) {
         return true;
     }
