@@ -329,6 +329,116 @@ curl --cookie ./cookiefile http://localhost:8080/hi
 curl --cookie ./cookiefile http://localhost:8080/hello
 ```
 
+### Authorization or Access Control ###
+
+> Once authentication is successful, we can move on to authorization, and the core strategy here is AccessDecisionManager. There are three implementations provided by the framework and all three delegate to a chain of AccessDecisionVoter, a bit like the ProviderManager delegates to AuthenticationProviders.
+
+一旦验证通过，就会迎来权限验证；权限验证的核心策略是：`AccessDecisionManager`
+
+![21](21.jpeg)
+
+> An AccessDecisionVoter considers an Authentication (representing a principal) and a secure Object which as been decorated with ConfigAttributes:
+
+![22](22.jpeg)
+
+那么，`ConfigAttribute`是什么呢？
+
+![23](23.jpeg)
+
+#### SimpleAccessDecisionVoter ####
+
+```java
+public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Bean
+    public AccessDecisionManager accessDecisionManager() {
+        List<AccessDecisionVoter<? extends Object>> decisionVoters
+                = Arrays.asList(
+                new SimpleAccessDecisionVoter());
+        return new UnanimousBased(decisionVoters);
+    }
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+                .csrf().disable()
+                .authorizeRequests()
+                .antMatchers("/hello").authenticated().accessDecisionManager(accessDecisionManager())
+                .and()
+                .formLogin().permitAll();
+    }
+
+    @Override
+    public void configure(AuthenticationManagerBuilder builder) throws Exception {
+        builder.inMemoryAuthentication()
+                .withUser("user")
+                .password("{noop}password")
+                .roles("USER");
+    }
+}
+```
+
+```java
+public class SimpleAccessDecisionVoter implements AccessDecisionVoter {
+
+    int ACCESS_GRANTED = 1;
+    int ACCESS_ABSTAIN = 0;
+    int ACCESS_DENIED = 1;
+
+    @Override
+    public boolean supports(ConfigAttribute configAttribute) {
+        return true;
+    }
+
+    @Override
+    public int vote(Authentication authentication, Object o, Collection collection) {
+        System.out.println(o.getClass());
+        System.out.println(o);
+        for (Object attribute : attributes) {
+            System.out.println(attribute.getClass());
+            System.out.println(attribute);
+        }
+        return ACCESS_GRANTED;
+    }
+
+    @Override
+    public boolean supports(Class aClass) {
+        return true;
+    }
+}
+```
+
+向`loveu`项目添加以上代码，然后把项目运行起来
+
+```shell
+// 期望成功
+curl -d username=user -d password=password --cookie-jar ./cookiefile -L http://localhost:8080/login
+// 期望成功
+curl --cookie ./cookiefile http://localhost:8080/hello
+rm cookiefile
+
+// 期望失败，因为没通过验证
+curl -d username=wrongusername -d password=wrongpassword --cookie-jar ./cookiefile -L http://localhost:8080/login
+// 期望成功，因为授权是全通过的
+curl --cookie ./cookiefile http://localhost:8080/hello
+rm cookiefile
+```
+
+![24](24.jpg)
+
+运行结果完美符合我们的期望
+
+在`loveu`项目控制台的输出如图：
+
+![25](25.jpg)
+
+以上输出告诉我们两件事：
+
+1. 如何把一个`url`路径表达成`Object o`？
+2. `COnfigAttribute`的其中一个实现是：`WebExpressionConfigAttribute`
+
+#### WebExpressionVoter ####
+
 
 
 [](https://zhuanlan.zhihu.com/p/32952727)
