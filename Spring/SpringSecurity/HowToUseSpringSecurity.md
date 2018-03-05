@@ -385,12 +385,10 @@ public class SimpleAccessDecisionVoter implements AccessDecisionVoter {
     int ACCESS_ABSTAIN = 0;
     int ACCESS_DENIED = 1;
 
-    @Override
     public boolean supports(ConfigAttribute configAttribute) {
         return true;
     }
 
-    @Override
     public int vote(Authentication authentication, Object o, Collection collection) {
         System.out.println(o.getClass());
         System.out.println(o);
@@ -401,7 +399,6 @@ public class SimpleAccessDecisionVoter implements AccessDecisionVoter {
         return ACCESS_GRANTED;
     }
 
-    @Override
     public boolean supports(Class aClass) {
         return true;
     }
@@ -439,7 +436,109 @@ rm cookiefile
 
 #### WebExpressionVoter ####
 
+如果我们稍微改动一下`loveu`项目的代码：
 
+```java
+.antMatchers("/hello/*", "/hello").authenticated().accessDecisionManager(accessDecisionManager())
+```
+
+并用`curl`工具做两次测试：
+
+```shell
+curl --cookie ./cookiefile http://localhost:8080/hello
+curl --cookie ./cookiefile http://localhost:8080/hello/testing
+```
+
+![28](28.jpg)
+
+在`loveu`项目的控制台可以看到以下输出：
+
+![29](29.jpg)
+
+![26](26.jpeg)
+
+再来看一下两个`supports`方法：
+
+```java
+public boolean supports(ConfigAttribute attribute) {
+    return attribute instanceof WebExpressionConfigAttribute;
+}
+
+public boolean supports(Class<?> clazz) {
+    return FilterInvocation.class.isAssignableFrom(clazz);
+}
+```
+
+#### WebExpressionConfigAttribute ####
+
+```java
+class WebExpressionConfigAttribute implements ConfigAttribute,
+		EvaluationContextPostProcessor<FilterInvocation> {
+	private final Expression authorizeExpression;
+	private final EvaluationContextPostProcessor<FilterInvocation> postProcessor;
+
+	public WebExpressionConfigAttribute(Expression authorizeExpression,
+			EvaluationContextPostProcessor<FilterInvocation> postProcessor) {
+		this.authorizeExpression = authorizeExpression;
+		this.postProcessor = postProcessor;
+	}
+
+	Expression getAuthorizeExpression() {
+		return this.authorizeExpression;
+	}
+
+	@Override
+	public EvaluationContext postProcess(EvaluationContext context, FilterInvocation fi) {
+		return this.postProcessor == null ? context
+				: this.postProcessor.postProcess(context, fi);
+	}
+
+	@Override
+	public String getAttribute() {
+		return null;
+	}
+
+	@Override
+	public String toString() {
+		return this.authorizeExpression.getExpressionString();
+	}
+}
+```
+
+#### 小结 ####
+
+![27](27.jpeg)
+
+上面这张图概略地描述了`vote`方法的三个参数的意义（或作用）
+
+### Authorization or Access Control (2) ###
+
+> An AccessDecisionVoter considers an Authentication (representing a principal) and a secure Object which as been decorated with ConfigAttributes:
+
+```java
+boolean supports(ConfigAttribute attribute);
+
+boolean supports(Class<?> clazz);
+
+int vote(Authentication authentication, S object,
+        Collection<ConfigAttribute> attributes);
+```
+
+> The Object is completely generic in the signatures of the AccessDecisionManager and AccessDecisionVoter - it represents anything that a user might want to access (a web resource or a method in a Java class are the two most common cases). The ConfigAttributes are also fairly generic, representing a decoration of the secure Object with some metadata that determine the level of permission required to access it. ConfigAttribute is an interface but it only has one method which is quite generic and returns a String, so these strings encode in some way the intention of the owner of the resource, expressing rules about who is allowed to access it. A typical ConfigAttribute is the name of a user role (like ROLE_ADMIN or ROLE_AUDIT), and they often have special formats (like the ROLE_ prefix) or represent expressions that need to be evaluated.
+
+关于这三个参数，我们在`Authorization or Access Control`中有过详细的说明，在此不再赘述
+
+> Most people just use the default AccessDecisionManager which is AffirmativeBased (if no voters decline then access is granted). Any customization tends to happen in the voters, either adding new ones, or modifying the way that the existing ones work.
+
+> It is very common to use ConfigAttributes that are Spring Expression Language (SpEL) expressions, for example isFullyAuthenticated() && hasRole('FOO'). This is supported by an AccessDecisionVoter that can handle the expressions and create a context for them. To extend the range of expressions that can be handled requires a custom implementation of SecurityExpressionRoot and sometimes also SecurityExpressionHandler.
+
+类似于正则表达式的一种语言 + 解析器
+
+## Web Security ##
+
+> Spring Security in the web tier (for UIs and HTTP back ends) is based on Servlet Filters, so it is helpful to look at the role of Filters generally first. The picture below shows the typical layering of the handlers for a single HTTP request.
+
+`Spring Security`的实现方式果然是过滤器（或者说是请求拦截器？）
 
 [](https://zhuanlan.zhihu.com/p/32952727)
 
