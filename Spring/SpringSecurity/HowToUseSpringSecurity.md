@@ -570,6 +570,33 @@ int vote(Authentication authentication, S object,
 
 果然是通过委托来实现的（`Spring Security`还真是特别喜欢这种设计模式啊）
 
+> In fact there is even one more layer of indirection in the security filter: it is usually installed in the container as a DelegatingFilterProxy, which does not have to be a Spring @Bean. The proxy delegates to a FilterChainProxy which is always a @Bean, usually with a fixed name of springSecurityFilterChain. It is the FilterChainProxy which contains all the security logic arranged internally as a chain (or chains) of filters. All the filters have the same API (they all implement the Filter interface from the Servlet Spec) and they all have the opportunity to veto the rest of the chain.
+
+这段话翻译起来太麻烦，看图吧：
+
+![33](33.jpeg)
+
+### DelegatingFilterProxy ###
+
+![34](34.jpeg)
+
++ `FilterChain filterChain`应该是后续的`filters`，对本次过滤没有影响
++ 为什么会有`ServletResponse response`这种奇怪的参数传进来？讲道理`response`应该和过滤没关系啊？有可能是方便过滤器在截断请求（即不把请求往后传）之后立马返回一个响应
+
+![35](35.jpeg)
+
+### FilterChainProxy ###
+
+![36](36.jpeg)
+
+### VirtualFilterChain ###
+
+![37](37.jpeg)
+
+这段代码写得非常棒！是一段很优雅的代码！
+
+如果是我来写，实现相同的功能，可能就是一个带`break`的循环：破坏与调用链的相似性
+
 
 
 [](https://zhuanlan.zhihu.com/p/32952727)
