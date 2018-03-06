@@ -706,18 +706,44 @@ docker pull maven
 docker run -t -i --name springsecurity -v ~/spring-security/:/spring-security -v ~/loveu:/loveu maven /bin/bash
 cd /springsecurity
 ./gradlew build -x test
-./gradlew mavenBom -x test
+./gradlew mavenBom
 ./gradlew install
-cd /love
+cd /loveu
 mvn spring-boot:run
-
-ls ~/.m2/repository/org/springframework/security
-rm -r ~/.m2/repository/org/springframework/security/*
-mvn spring-boot:run -o
 
 ls ~/.m2/repository/org/springframework/security/spring-security-web/
 // 5.0.3.RELEASE  5.1.0.BUILD-SNAPSHOT  maven-metadata-local.xml
 ```
+
+根据编译环境的输出，我们需要修改`Loveu`项目的`pom.xml`文件：
+
+![48](48.jpg)
+
+同时，为了验证`Loveu`项目确实使用的是我们编译出来的依赖性，我们稍微修改了几个地方：
+
+```shell
+vim spring-security/web/src/main/java/org/springframework/security/web/DefaultSecurityFilterChain.java
+```
+
+![49](49.jpg)
+
+```java
+vim spring-security/config/src/main/java/org/springframework/security/config/annotation/web/builders/WebSecurity.java
+```
+
+![50](50.jpg)
+
+输出如下：
+
+![46](46.jpg)
+
+![47](47.jpg)
+
+至此，我们终于有调试环境
+
+#### 打印函数栈 ####
+
+![51](51.jpg)
 
 
 
