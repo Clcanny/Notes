@@ -617,6 +617,114 @@ int vote(Authentication authentication, S object,
 
 ### 默认的filterChains ###
 
+稍微改动一下`Loveu`项目，配合我们的实验需要
+
+![41](41.jpg)
+
+![42](42.jpg)
+
+![43](43.jpg)
+
+```shell
+Request received for GET '/':
+
+org.apache.catalina.connector.RequestFacade@57731ea7
+
+servletPath:/
+pathInfo:null
+headers: 
+host: localhost:8080
+user-agent: curl/7.54.0
+accept: */*
+cookie: JSESSIONID=7AA03B11A625E0197A762F11DCA94F32
+
+
+Security filter chain: [
+  WebAsyncManagerIntegrationFilter
+  SecurityContextPersistenceFilter
+  HeaderWriterFilter
+  LogoutFilter
+  UsernamePasswordAuthenticationFilter
+  DefaultLoginPageGeneratingFilter
+  RequestCacheAwareFilter
+  SecurityContextHolderAwareRequestFilter
+  AnonymousAuthenticationFilter
+  SessionManagementFilter
+  ExceptionTranslationFilter
+  FilterSecurityInterceptor
+]
+```
+
+我们得到了一个默认的`filterChain`，但这还不够，我们需要知道这个`filterChain`是如何被配置起来的
+
+换言之，`Spring Boot`为我们做了什么呢？
+
+#### 不使用Spring-Boot黑魔法 ####
+
+```xml
+<dependency>
+    <groupId>org.springframework.security</groupId>
+    <artifactId>spring-security-config</artifactId>
+</dependency>
+
+<dependency>
+    <groupId>org.springframework.security</groupId>
+    <artifactId>spring-security-web</artifactId>
+</dependency>
+```
+
+以上两个依赖项可以完全替代`spring-boot-starter-security`的作用
+
+#### DefaultSecurityFilterChain ####
+
+![44](44.jpg)
+
+![45](45.jpg)
+
+代码与我们看到的输出是吻合的（说明这段日志很可能是上面一段代码打印出来的）
+
+那么，问题就变成了：谁在调用`DefaultSecurityFilterChain`？
+
+```shell
+./config/src/main/java/org/springframework/security/config/annotation/web/builders/HttpSecurity.java:119:implements SecurityBuilder<DefaultSecurityFilterChain>,
+./config/src/main/java/org/springframework/security/config/annotation/web/builders/HttpSecurity.java:1078:protected DefaultSecurityFilterChain performBuild() throws Exception {
+./config/src/main/java/org/springframework/security/config/annotation/web/builders/HttpSecurity.java:1080:return new DefaultSecurityFilterChain(requestMatcher, filters);
+```
+
+```shell
+./config/src/main/java/org/springframework/security/config/annotation/web/builders/WebSecurity.java:288:securityFilterChains.add(new DefaultSecurityFilterChain(ignoredRequest));
+```
+
+#### Debug ####
+
+在跟踪源代码的时候面临了一个非常大的问题：只用搜索不用调试非常不方便
+
+所以搭建调试环境是非常必要的（建议使用国外服务器，体验直线上升）
+
+```shell
+docker pull maven
+docker run -t -i --name springsecurity -v ~/spring-security/:/spring-security -v ~/loveu:/loveu maven /bin/bash
+cd /springsecurity
+./gradlew build -x test
+./gradlew mavenBom -x test
+./gradlew install
+cd /love
+mvn spring-boot:run
+
+ls ~/.m2/repository/org/springframework/security
+rm -r ~/.m2/repository/org/springframework/security/*
+mvn spring-boot:run -o
+
+ls ~/.m2/repository/org/springframework/security/spring-security-web/
+// 5.0.3.RELEASE  5.1.0.BUILD-SNAPSHOT  maven-metadata-local.xml
+```
+
+
+
+[](https://juejin.im/post/5a434de6f265da43333eae7d)
+
+### Creating and Customizing Filter Chains ###
+
 
 
 [](https://zhuanlan.zhihu.com/p/32952727)
