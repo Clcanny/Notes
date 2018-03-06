@@ -14,23 +14,15 @@ import java.util.Arrays;
 import java.util.List;
 
 @Configuration
-@EnableWebSecurity
+@EnableWebSecurity(debug = true)
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
-
-    @Bean
-    public AccessDecisionManager accessDecisionManager() {
-        List<AccessDecisionVoter<? extends Object>> decisionVoters
-                = Arrays.asList(
-                new SimpleAccessDecisionVoter());
-        return new UnanimousBased(decisionVoters);
-    }
-
+    
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
                 .csrf().disable()
                 .authorizeRequests()
-                .antMatchers("/hello/*", "/hello").authenticated().accessDecisionManager(accessDecisionManager())
+                .antMatchers("/hello").authenticated()
                 .and()
                 .formLogin().permitAll();
     }
@@ -42,5 +34,4 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .password("{noop}password")
                 .roles("USER");
     }
-
 }

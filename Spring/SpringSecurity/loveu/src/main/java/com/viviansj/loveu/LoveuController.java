@@ -12,10 +12,4 @@ public class LoveuController {
     public String sayHello() {
         return "Hello!";
     }
-
-    @GetMapping("/hi")
-    @ResponseBody
-    public String sayHi() {
-        return "Hi!";
-    }
 }

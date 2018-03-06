@@ -405,7 +405,7 @@ public class SimpleAccessDecisionVoter implements AccessDecisionVoter {
 }
 ```
 
-向`loveu`项目添加以上代码，然后把项目运行起来
+向`Loveu`项目添加以上代码，然后把项目运行起来
 
 ```shell
 // 期望成功
@@ -425,7 +425,7 @@ rm cookiefile
 
 运行结果完美符合我们的期望
 
-在`loveu`项目控制台的输出如图：
+在`Loveu`项目的控制台的输出如图：
 
 ![25](25.jpg)
 
@@ -436,7 +436,7 @@ rm cookiefile
 
 #### WebExpressionVoter ####
 
-如果我们稍微改动一下`loveu`项目的代码：
+如果我们稍微改动一下`Loveu`项目的代码：
 
 ```java
 .antMatchers("/hello/*", "/hello").authenticated().accessDecisionManager(accessDecisionManager())
@@ -451,7 +451,7 @@ curl --cookie ./cookiefile http://localhost:8080/hello/testing
 
 ![28](28.jpg)
 
-在`loveu`项目的控制台可以看到以下输出：
+在`Loveu`项目的控制台可以看到以下输出：
 
 ![29](29.jpg)
 
@@ -596,6 +596,26 @@ int vote(Authentication authentication, S object,
 这段代码写得非常棒！是一段很优雅的代码！
 
 如果是我来写，实现相同的功能，可能就是一个带`break`的循环：破坏与调用链的相似性
+
+## Web Security (2) ##
+
+>  There can be multiple filter chains all managed by Spring Security in the same top level FilterChainProxy and all unknown to the container. The Spring Security filter contains a list of filter chains, and dispatches a request to the first chain that matches it. The picture below shows the dispatch happening based on matching the request path (/foo/\*\* matches before /\*\*). This is very common but not the only way to match a request. The most important feature of this dispatch process is that only one chain ever handles a request.
+
+前面没有提到的一个关键点是：`FilterChainProxy`可以管理非常多的`FilterChain`，把不同的请求分发给不同的`FilterChain`；`FilterChain`按照一定的规则排序，然后把请求分发给第一个匹配上的`FilterChain`
+
+![38](38.png)
+
+![39](39.jpeg)
+
+> A vanilla Spring Boot application with no custom security configuration has a several (call it n) filter chains, where usually n=6. The first (n-1) chains are there just to ignore static resource patterns, like /css/\*\* and /images/\*\*, and the error view /error (the paths can be controlled by the user with security.ignored from the SecurityProperties configuration bean). The last chain matches the catch all path /\*\* and is more active, containing logic for authentication, authorization, exception handling, session handling, header writing, etc. There are a total of 11 filters in this chain by default, but normally it is not necessary for users to concern themselves with which filters are used and when.
+
+![40](40.jpeg)
+
+> The fact that all filters internal to Spring Security are unknown to the container is important, especially in a Spring Boot application, where all @Beans of type Filter are registered automatically with the container by default. So if you want to add a custom filter to the security chain, you need to either not make it a @Bean or wrap it in a FilterRegistrationBean that explicitly disables the container registration.
+
+以上所说的过滤器都是不为容器所感知的，且容器被我们以一定的形式覆盖掉（所以要小心）
+
+### 默认的filterChains ###
 
 
 
