@@ -17,12 +17,12 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity(debug = true)
-@Order(SecurityProperties.BASIC_AUTH_ORDER - 10)
-public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+@Order(SecurityProperties.BASIC_AUTH_ORDER - 11)
+public class WebSecurityConfig2 extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.antMatcher("/hello");
+        http.antMatcher("/hi");
     }
 
     @Override

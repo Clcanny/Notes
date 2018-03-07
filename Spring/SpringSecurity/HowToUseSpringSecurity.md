@@ -793,6 +793,74 @@ mvn spring-boot:run
 
 ### Creating and Customizing Filter Chains ###
 
+> The default fallback filter chain in a Spring Boot app (the one with the /** request matcher) has a predefined order of SecurityProperties.BASIC_AUTH_ORDER. You can switch it off completely by setting security.basic.enabled=false, or you can use it as a fallback and just define other rules with a lower order. To do that just add a @Bean of type WebSecurityConfigurerAdapter (or WebSecurityConfigurer) and decorate the class with @Order. Example:
+
+![61](61.jpg)
+
+> This bean will cause Spring Security to add a new filter chain and order it before the fallback.
+
+> Many applications have completely different access rules for one set of resources compared to another. For example an application that hosts a UI and a backing API might support cookie-based authentication with a redirect to a login page for the UI parts, and token-based authentication with a 401 response to unauthenticated requests for the API parts. Each set of resources has its own WebSecurityConfigurerAdapter with a unique order and a its own request matcher. If the matching rules overlap the earliest ordered filter chain will win.
+
+在开发应用时，会碰到这么一个情况：不同的资源有不同的授权规则，那么我们可以为这些资源分别配置`WebSecurityConfigurerAdapter`
+
+![62](62.jpg)
+
+注意两个`WebSecurityCOnfigurerAdapter`的`Order`一定不能相同，否则报错
+
+#### Request Matching for Dispatch and Authorization ####
+
+> A security filter chain (or equivalently a WebSecurityConfigurerAdapter) has a request matcher that is used for deciding whether to apply it to an HTTP request. Once the decision is made to apply a particular filter chain, no others are applied. But within a filter chain you can have more fine grained control of authorization by setting additional matchers in the HttpSecurity configurer. Example:
+
+我们前面已经说过，每一个请求至多只有一个`filterChain`会起作用
+
+但是，在这个`filterChain`内部，还是可以“开衩”的（即变成一棵树），如以下代码所示：
+
+![63](63.jpg)
+
+我猜想这种所谓的分叉，内部的实现应该也是`delegate`
+
+> One of the easiest mistakes to make with configuring Spring Security is to forget that these matchers apply to different processes, one is a request matcher for the whole filter chain, and the other is only to choose the access rule to apply.
+
+当然，两个选择器的作用是不一样的：
+
++ 选择使用哪个`filterChain`
++ 选择使用哪个鉴权规则
+
+#### Combining Application Security Rules with Actuator Rules ####
+
+> If you are using the Spring Boot Actuator for management endpoints, you probably want them to be secure, and by default they will be.
+
+很好，`Spring boot Actuator`是什么？一脸懵逼 x 5
+
+`actuator`是一个用来做系统健康检测的模块，可以将系统运行过程中的磁盘空间、线程数、以及程序连接的数据库情况通过`json`返回，然后再结合预警、监控模块进行实时系统监控
+
+（我决定忽略这一小节）
+
+## Working with Threads ##
+
+> Spring Security is fundamentally thread bound because it needs to make the current authenticated principal available to a wide variety of downstream consumers. The basic building block is the SecurityContext which may contain an Authentication (and when a user is logged in it will be an Authentication that is explicitly authenticated). You can always access and manipulate the SecurityContext via static convenience methods in SecurityContextHolder which in turn simply manipulate a TheadLocal, e.g.
+
+`Spring Security`基本上线程绑定的，也就是说：`Spring Security`创建的变量等都是在线程专属的内存中
+
+`Spring Security`提供一个返回线程局部变量的静态方法：让我们获取该变量
+
+```java
+SecurityContext context = SecurityContextHolder.getContext();
+Authentication authentication = context.getAuthentication();
+assert(authentication.isAuthenticated);
+```
+
+```java
+@RequestMapping("/foo")
+public String foo(@AuthenticationPrincipal User user) {
+  ... // do stuff with user
+}
+```
+
+# 参考材料 #
+
+[Spring Security Architecture](https://spring.io/guides/topicals/spring-security-architecture)
+
 [](https://juejin.im/post/5a434de6f265da43333eae7d)
 
 [](https://zhuanlan.zhihu.com/p/32952727)
