@@ -170,7 +170,7 @@ public void init(final WebSecurity web) throws Exception {
 
 那么这个大的逻辑就很清晰了：我们写一些规则，然后拦截器把请求拦截下来，交给我们写的规则
 
-如果我们的规则说可以，则把这个请求分发给对应的`COntroller`；如果我们的规则说不可以，那么进入错误处理流程
+如果我们的规则说可以，则把这个请求分发给对应的`Controller`；如果我们的规则说不可以，那么进入错误处理流程
 
 # 阅读旅行指南 #
 
@@ -613,7 +613,7 @@ int vote(Authentication authentication, S object,
 
 > The fact that all filters internal to Spring Security are unknown to the container is important, especially in a Spring Boot application, where all @Beans of type Filter are registered automatically with the container by default. So if you want to add a custom filter to the security chain, you need to either not make it a @Bean or wrap it in a FilterRegistrationBean that explicitly disables the container registration.
 
-以上所说的过滤器都是不为容器所感知的，且容器被我们以一定的形式覆盖掉（所以要小心）
+以上所说的过滤器都是不为容器所感知的，且容易被我们以一定的形式覆盖掉（所以要小心）
 
 ### 默认的filterChains ###
 
@@ -719,7 +719,7 @@ ls ~/.m2/repository/org/springframework/security/spring-security-web/
 
 ![48](48.jpg)
 
-同时，为了验证`Loveu`项目确实使用的是我们编译出来的依赖性，我们稍微修改了几个地方：
+同时，为了验证`Loveu`项目确实使用的是我们编译出来的依赖，我们稍微修改了几个地方：
 
 ```shell
 vim spring-security/web/src/main/java/org/springframework/security/web/DefaultSecurityFilterChain.java
@@ -773,7 +773,7 @@ mvn spring-boot:run
 
 追到最后，竟然是什么都没有，还真是让人哭笑不得
 
-问题是，这样一个空的实现是怎么变出一大串“filterChains”来的呢？
+问题是，这样一个空的实现是怎么“变”出一大串`filterChains`来的呢？
 
 ![57](57.jpg)
 
@@ -785,7 +785,7 @@ mvn spring-boot:run
 
 ![59](59.jpeg)
 
-果然是把默认配置“藏”在类`WebSecurityConfigurerAdapter`
+果然是把默认配置“藏”在类`WebSecurityConfigurerAdapter`里
 
 #### 小结 ####
 
@@ -832,7 +832,7 @@ mvn spring-boot:run
 
 很好，`Spring boot Actuator`是什么？一脸懵逼 x 5
 
-`actuator`是一个用来做系统健康检测的模块，可以将系统运行过程中的磁盘空间、线程数、以及程序连接的数据库情况通过`json`返回，然后再结合预警、监控模块进行实时系统监控
+`Actuator`是一个用来做系统健康检测的模块，可以将系统运行过程中的磁盘空间、线程数、以及程序连接的数据库情况通过`json`返回，然后再结合预警、监控模块进行实时系统监控
 
 （我决定忽略这一小节）
 
@@ -840,9 +840,9 @@ mvn spring-boot:run
 
 > Spring Security is fundamentally thread bound because it needs to make the current authenticated principal available to a wide variety of downstream consumers. The basic building block is the SecurityContext which may contain an Authentication (and when a user is logged in it will be an Authentication that is explicitly authenticated). You can always access and manipulate the SecurityContext via static convenience methods in SecurityContextHolder which in turn simply manipulate a TheadLocal, e.g.
 
-`Spring Security`基本上线程绑定的，也就是说：`Spring Security`创建的变量等都是在线程专属的内存中
+`Spring Security`基本是线程绑定的，也就是说：`Spring Security`创建的变量都在线程专属的内存中
 
-`Spring Security`提供一个返回线程局部变量的静态方法：让我们获取该变量
+`Spring Security`提供一个返回线程局部变量的静态方法
 
 ```java
 SecurityContext context = SecurityContextHolder.getContext();
