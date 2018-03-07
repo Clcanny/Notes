@@ -787,11 +787,13 @@ mvn spring-boot:run
 
 果然是把默认配置“藏”在类`WebSecurityConfigurerAdapter`
 
-[](https://juejin.im/post/5a434de6f265da43333eae7d)
+#### 小结 ####
+
+![60](60.jpeg)
 
 ### Creating and Customizing Filter Chains ###
 
-
+[](https://juejin.im/post/5a434de6f265da43333eae7d)
 
 [](https://zhuanlan.zhihu.com/p/32952727)
 
