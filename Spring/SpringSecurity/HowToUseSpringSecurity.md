@@ -745,7 +745,47 @@ vim spring-security/config/src/main/java/org/springframework/security/config/ann
 
 ![51](51.jpg)
 
+#### WebSecurityConfiguration ####
 
+![52](52.jpeg)
+
+![53](53.jpg)
+
+```shell
+cd /spring-security
+./gradlew :spring-security-config:build -x test -x integrationTest
+./gradlew :spring-security-config:install
+cd /loveu
+mvn spring-boot:run
+```
+
+![54](54.jpg)
+
+结果非常地让我感到意外：唯一注入的一个`bean`竟然是我自己写的（也许因为配置了`WebSecurityConfig`从而破坏了默认设置）
+
+如果我们删除掉`WebSecurityConfig.java`，再试一次，会看到以下输出：
+
+![55](55.jpg)
+
+#### SpringBootWebSecurityConfiguration ####
+
+![56](56.jpg)
+
+追到最后，竟然是什么都没有，还真是让人哭笑不得
+
+问题是，这样一个空的实现是怎么变出一大串“filterChains”来的呢？
+
+![57](57.jpg)
+
+默认设置会不会“藏”在`WebSecurityConfigurerAdapter`里面呢？
+
+#### WebSecurityConfigurerAdapter ####
+
+![58](58.jpg)
+
+![59](59.jpeg)
+
+果然是把默认配置“藏”在类`WebSecurityConfigurerAdapter`
 
 [](https://juejin.im/post/5a434de6f265da43333eae7d)
 
