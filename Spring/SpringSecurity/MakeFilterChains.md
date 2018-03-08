@@ -231,9 +231,11 @@ protected final O doBuild() throws Exception {
 
 我们可以猜想：`performBuild`函数需要用到`this.configurers`变量，但是目前为止，没有看到一个`public`或者`protected`函数把这个私有变量暴露出去，这是非常让人困惑的
 
+
+
 # WebSecurity #
 
-## configurers的传递 ##
+## configures的传递 ##
 
 ```java
 Assert.state(
@@ -242,4 +244,16 @@ Assert.state(
 						+ WebSecurity.class.getSimpleName()
 						+ ".addSecurityFilterChainBuilder directly");
 ```
+
+![23](23.jpeg)
+
+## addSecurityFilterChainBuilder ##
+
+![24](24.jpg)
+
+`List<SecurityBuilder<? extends SecurityFilterChain>> securityFilterChainBuilders`
+
+## performBuild ##
+
+![25](25.jpeg)
 
