@@ -300,3 +300,22 @@ Assert.state(
 
 这四个变量显然在告诉我们：一个`HttpSecurity`对应着一个`FilterChain`
 
+## getOrApply ##
+
+![36](36.jpg)
+
+一句话概括这个函数：把`configurer`添加到父类的私有变量`configurers`中去
+
+## performBuild ##
+
+![37](37.jpg)
+
+简单的排序操作，至于`filters`怎么来的在前面有介绍（看图）
+
+要说明的是，我们一直说把`filters`连成一个链表，但这个是概念上的“链表”，在实现中用数组也是可以的
+
+所以不要因为找不到构建链表的代码而觉得代码没看完
+
+# DefaultSecurityFilterChain #
+
+![38](38.jpg)
