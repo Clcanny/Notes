@@ -52,7 +52,7 @@ mvn spring-boot:run
 很好，符合我们的预期，现在我们可以确信这样一个流程：
 
 1. `DelegatingFilterProxy`和`Spring`容器沟通，给我一个名字叫`springSecurityFilterChain`的`bean`好不好哇？
-2. `Spring`容器去尝试获取名为`springSecurityFilterChain`的`bean`，之后引起了在`MakeFilterChain`一文中描述的各种复杂的行为
+2. `Spring`容器去尝试获取名为`springSecurityFilterChain`的`bean`，之后引起了在`MakeFilterChains`一文中描述的各种复杂的行为
 
 所以，通过调用栈是看不出来`DelegatingFilterProxy`在调用`WebSecurityConfiguration.springSecurityFilterChain`的
 
