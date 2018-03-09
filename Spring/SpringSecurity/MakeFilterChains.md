@@ -4,6 +4,8 @@
 
 ![3](3.jpeg)
 
+![31](31.jpeg)
+
 # 预备知识 #
 
 ## @Configuration ##
@@ -231,8 +233,6 @@ protected final O doBuild() throws Exception {
 
 我们可以猜想：`performBuild`函数需要用到`this.configurers`变量，但是目前为止，没有看到一个`public`或者`protected`函数把这个私有变量暴露出去，这是非常让人困惑的
 
-
-
 # WebSecurity #
 
 ## configures的传递 ##
@@ -247,6 +247,13 @@ Assert.state(
 
 ![23](23.jpeg)
 
+但这样的设计是有一定问题的，因为：
+
+1. 使用强制转换
+2. 转折较多，较难理解
+
+![26](26.jpg)
+
 ## addSecurityFilterChainBuilder ##
 
 ![24](24.jpg)
@@ -256,4 +263,40 @@ Assert.state(
 ## performBuild ##
 
 ![25](25.jpeg)
+
+# WebSecurityConfigurerAdapter #
+
+## getHttp ##
+
+![28](28.jpg)
+
+![27](27.jpg)
+
+![29](29.jpg)
+
+## init ##
+
+![30](30.jpg)
+
+# HttpSecurity #
+
+![31](31.jpeg)
+
+来看一下局部的调用链（核心类是`WebSecurity` / `HttpSecurity` / `WebSecurityConfigurerAdapter`），注意两个`AbstractSecurityBuilder`实例不是同一个实例，两个`AbstractConfiguredSecurityBuilder`也不是同一个实例，两个`HttpSecurity`实例却是同一个实例（分开画只是为了方便）：
+
+![33](33.jpeg)
+
+升级版的示意图：
+
+![34](34.jpeg)
+
+尤其需要注意的是两个圈：
+
+![35](35.jpeg)
+
+## 私有变量 ##
+
+![32](32.jpg)
+
+这四个变量显然在告诉我们：一个`HttpSecurity`对应着一个`FilterChain`
 
