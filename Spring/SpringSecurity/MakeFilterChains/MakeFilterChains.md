@@ -158,7 +158,7 @@ public abstract class AbstractSecurityBuilder<O> implements SecurityBuilder<O> {
 }
 ```
 
-简单来说，这个类的目的就是高效地解决锁相关的问题（采用一种很简单的思路解决“读写锁”，因为这种“读写锁”具有一种很特殊的性质：先写在读，且只写一次，故可用一个简单的原子变量解决之）
+简单来说，这个类的目的就是高效地解决锁相关的问题（采用一种很简单的思路解决“读写锁”，因为这种“读写锁”具有一种很特殊的性质：先写再读，且只写一次，故可用一个简单的原子变量解决之）
 
 该类具有一个泛型参数`O`，代表着需要构建的对象
 
@@ -223,7 +223,7 @@ protected final O doBuild() throws Exception {
 
 ![21](21.jpeg)
 
-这个函数的作用用以计划概括就是：按照一定的规则，把`configuer`放到`this.configurers`中去
+这个函数的作用用一句话概括就是：按照一定的规则，把`configuer`放到`this.configurers`中去
 
 ## apply ##
 
