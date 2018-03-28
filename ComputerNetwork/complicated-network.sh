@@ -77,9 +77,15 @@ docker exec container2.3 bash -c "ping 172.0.1.2 -c 4" | tail -1
 docker exec container2.3 bash -c "ping 172.0.1.3 -c 4" | tail -1
 docker exec container2.3 bash -c "ping 172.0.2.2 -c 4" | tail -1
 
-# 拷贝tshark产生的文件
+# 新建一个容器用于处理tshark文件
 docker cp container1.2:/container1.2.tshark .
+docker run -itd --name tshark network:ubuntu
+docker cp container1.2.tshark tshark:/container.tshark
+docker exec tshark bash -c "tshark -r container.tshark -Y \"icmp\" -w container1.2.tshark"
+
+# 将处理完成的tshark文件拷贝出来
+docker cp tshark:/container1.2.tshark .
 
 # 清理工作
-docker rm -f router1 router2 container1.2 container1.3 container2.2 container2.3
+docker rm -f router1 router2 container1.2 container1.3 container2.2 container2.3 tshark
 docker network rm VMNet1 VMNet2 NetworkBetweenRouters
