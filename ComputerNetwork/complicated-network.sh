@@ -36,7 +36,8 @@ docker exec router2 bash -c "ip route"
 # 查看是否允许转发
 docker exec router2 bash -c "cat /proc/sys/net/ipv4/ip_forward"
 
-docker run -itd --privileged --name container1.2 network:ubuntu
+# 在container1.2上运行抓包软件
+docker run -itd --privileged --name container1.2 network:ubuntu /bin/bash -c "tshark -w container1.2.tshark"
 docker network connect VMNet1 container1.2 --ip 172.0.1.2
 docker network disconnect bridge container1.2
 # 设置gateway
@@ -75,6 +76,9 @@ docker exec container2.2 bash -c "ping 172.0.2.3 -c 4" | tail -1
 docker exec container2.3 bash -c "ping 172.0.1.2 -c 4" | tail -1
 docker exec container2.3 bash -c "ping 172.0.1.3 -c 4" | tail -1
 docker exec container2.3 bash -c "ping 172.0.2.2 -c 4" | tail -1
+
+# 拷贝tshark产生的文件
+docker cp container1.2:/container1.2.tshark .
 
 # 清理工作
 docker rm -f router1 router2 container1.2 container1.3 container2.2 container2.3
