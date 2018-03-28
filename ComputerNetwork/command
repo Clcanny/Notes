@@ -1,0 +1,46 @@
+docker run -t -i --name container10 ubuntu:latest /bin/bash
+// apt-get update
+// apt-get install iputils-ping
+docker network connect vmnet1 container10 --ip 172.20.0.3
+docker network disconnect bridge container10
+
+docker run -t -i --name container11 ubuntu:latest /bin/bash
+// apt-get update
+// apt-get install iputils-ping
+docker network connect vmnet1 container11 --ip 172.20.0.4
+docker network disconnect bridge container11
+
+docker run -t -i --privileged --name router1 ubuntu:latest /bin/bash
+// apt-get update
+// apt-get install iputils-ping
+// apt-get install iproute2
+docker network connect vmnet1 router1 --ip 172.20.0.5
+docker network connect networkBetweenRouters router1 --ip 172.22.0.5
+// ip route delete 172.20.0.0/28
+// ip route delete 172.22.0.0/28
+// ip route add 172.20.0.0/28 via 172.20.0.5
+// ip route add 172.22.0.0/28 via 172.22.0.5
+// ip route add 172.22.0.0/28 dev eth2 src 172.22.0.5 table admin
+// ip route add default via 172.22.0.5 dev eth2 table admin
+// ip rule add from 172.22.0.0/28 table admin
+// ip rule add to 172.22.0.0/28 table admin
+docker network disconnect bridge router1
+
+docker run -t -i --name container20 ubuntu:latest /bin/bash
+// apt-get update
+// apt-get install iputils-ping
+docker network connect vmnet2 container20 --ip 172.21.0.3
+docker network disconnect bridge container20
+
+docker run -t -i --name container21 ubuntu:latest /bin/bash
+// apt-get update
+// apt-get install iputils-ping
+docker network connect vmnet2 container21 --ip 172.21.0.4
+docker network disconnect bridge container21
+
+docker run -t -i --name router2 ubuntu:latest /bin/bash
+// apt-get update
+// apt-get install iputils-ping
+docker network connect vmnet2 router2 --ip 172.21.0.5
+docker network connect networkBetweenRouters router2 --ip 172.22.0.6
+docker network disconnect bridge router2
