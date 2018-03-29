@@ -102,7 +102,7 @@ class IcmpHeader
              * Options may exist at multiple protocol levels; they are always present at the uppermost socket level.
              */
             assert (setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) == 0);
-            assert (fcntl(sd, F_SETFL, O_NONBLOCK) == 0);
+            /* assert (fcntl(sd, F_SETFL, O_NONBLOCK) == 0); */
 
             assert (sendto(sd, this, sizeof(IcmpHeader), 0, (struct sockaddr*)addr, sizeof(struct sockaddr_in)) > 0);
         }

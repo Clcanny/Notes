@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:xenial
 
 ADD sources.list /etc/apt/sources.list
 ADD waitForever.sh /
