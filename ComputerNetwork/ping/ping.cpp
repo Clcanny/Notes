@@ -128,4 +128,15 @@ uint16_t IcmpHeader::sequenceIndex = 1;
 int main()
 {
     assert (sizeof(IcmpHeader) == 1 + 1 + 2 + 2 + 2 + 8);
+
+    struct hostent *hname = gethostbyname("127.0.0.1");
+    struct sockaddr_in addr;
+    /* bzero(&addr, sizeof(addr)); */
+    addr.sin_family = hname->h_addrtype;
+    addr.sin_port = 0;
+    addr.sin_addr.s_addr = *(long*)hname->h_addr;
+
+    IcmpHeader icmpHeader;
+    icmpHeader.request(&addr);
+    icmpHeader.response();
 }
