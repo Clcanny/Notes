@@ -9,7 +9,7 @@
 #include <netinet/in.h>
 #include <netinet/ip_icmp.h>
 
-class IcmpHeader
+class ICMP
 {
     private:
         static uint16_t sequenceIndex;
@@ -21,12 +21,13 @@ class IcmpHeader
         uint16_t identifier;
         uint16_t sequenceNumber;
         uint64_t timestamp;
+        char payload[8];
 
     private:
         void makeChecksum()
         {
             uint16_t* buf = reinterpret_cast<uint16_t*>(this);
-            int len = 1 + 1 + 2 + 2 + 2 + 8;
+            int len = sizeof(ICMP);
             unsigned int sum = 0;
 
             for (; len > 1; len -= 2)
@@ -84,6 +85,11 @@ class IcmpHeader
             time(&t);
             timestamp = *reinterpret_cast<uint64_t*>(&t);
 
+            for (int i = 0; i < 8; i++)
+            {
+                payload[i] = i + '\0';
+            }
+
             makeChecksum();
         }
 
@@ -104,7 +110,7 @@ class IcmpHeader
             assert (setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) == 0);
             /* assert (fcntl(sd, F_SETFL, O_NONBLOCK) == 0); */
 
-            assert (sendto(sd, this, sizeof(IcmpHeader), 0, (struct sockaddr*)addr, sizeof(struct sockaddr_in)) > 0);
+            assert (sendto(sd, this, sizeof(ICMP), 0, (struct sockaddr*)addr, sizeof(struct sockaddr_in)) > 0);
         }
 
         void response()
@@ -123,11 +129,11 @@ class IcmpHeader
         }
 };
 
-uint16_t IcmpHeader::sequenceIndex = 1;
+uint16_t ICMP::sequenceIndex = 1;
 
 int main()
 {
-    assert (sizeof(IcmpHeader) == 1 + 1 + 2 + 2 + 2 + 8);
+    assert (sizeof(ICMP) == 1 + 1 + 2 + 2 + 2 + 8 + 8);
 
     struct hostent *hname = gethostbyname("127.0.0.1");
     struct sockaddr_in addr;
@@ -136,7 +142,7 @@ int main()
     addr.sin_port = 0;
     addr.sin_addr.s_addr = *(long*)hname->h_addr;
 
-    IcmpHeader icmpHeader;
-    icmpHeader.request(&addr);
-    icmpHeader.response();
+    ICMP icmp;
+    icmp.request(&addr);
+    icmp.response();
 }
