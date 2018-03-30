@@ -9,11 +9,12 @@ int main()
     int sd = socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
 
     int len = 8;
-    char payload[len];
+    char payload[len + 1];
     for (int i = 0; i < len; i++)
     {
-        payload[i] = i + '\0';
+        payload[i] = i + 'a';
     }
+    payload[len] = '\0';
 
     struct hostent *hname = gethostbyname("172.0.0.2");
     struct sockaddr_in addr;
