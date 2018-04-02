@@ -22,7 +22,7 @@ docker cp ping container2:/ping
 docker exec container1 bash -c "./ping 172.0.0.2"
 docker exec container2 bash -c "./ping 172.0.0.1"
 
-docker cp container1:/container1.tshark ping.tshark
+# docker cp container1:/container1.tshark ping.tshark
 
 docker rm -f compile container1 container2
 docker network rm VMNet

@@ -66,7 +66,7 @@ class Ping
         bool ping(std::string host, int count, PingResult& pingResult);
 
     private:
-        unsigned short getChksum(unsigned short *addr,int len);
+        uint16_t getChecksum(uint16_t *addr, int len);
         int packIcmp(int pack_no, struct icmp* icmp);
         bool unpackIcmp(char *buf,int len, struct IcmpEchoReply *icmpEchoReply);
         struct timeval tvSub(struct timeval timeval1,struct timeval timval2);

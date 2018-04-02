@@ -9,31 +9,33 @@ Ping::Ping()
     m_icmp_seq = 0;
 }
 
-/*校验和算法*/
-unsigned short Ping::getChksum(unsigned short *addr,int len)
-{   
+uint16_t Ping::getChecksum(uint16_t *addr, int len)
+{
     int nleft = len;
-    int sum = 0;
-    unsigned short *w = addr;
-    unsigned short answer = 0;
+    uint32_t sum = 0;
+    uint16_t *w = (uint16_t *)addr;
+    uint16_t answer = 0;
 
     while (nleft > 1)
     {
-        sum += *w++;
+        sum += *w;
+        w++;
         nleft -= 2;
     }
     if (nleft == 1)
     {
-        *(unsigned char *)(&answer) = *(unsigned char *)w;
-        sum += answer;
+        /* *(unsigned char *)(&answer) = *(unsigned char *)w; */
+        sum += *((uint8_t *)w);
     }
-    sum = (sum >> 16) + (sum & 0xffff);
-    sum += (sum >> 16);
+
+    while (sum > 0xffff)
+    {
+        sum = (sum >> 16) + (sum & 0xffff);
+    }
     answer = ~sum;
     return answer;
 }
 
-/* 设置ICMP报头 */
 int Ping::packIcmp(int pack_no, struct icmp* icmp)
 {   
     int i, packsize;
@@ -50,14 +52,13 @@ int Ping::packIcmp(int pack_no, struct icmp* icmp)
     tval = (struct timeval *)icmp->icmp_data;
     /* 记录发送时间 */
     gettimeofday(tval, NULL);
-    picmp->icmp_cksum = getChksum((unsigned short *)icmp, packsize);
+    picmp->icmp_cksum = getChecksum((uint16_t *)icmp, packsize);
     return packsize;
 }
 
-/* 剥去ICMP报头 */
-bool Ping::unpackIcmp(char *buf,int len, struct IcmpEchoReply *icmpEchoReply)
+bool Ping::unpackIcmp(char *buf, int len, struct IcmpEchoReply *icmpEchoReply)
 {   
-    int i,iphdrlen;
+    int i, iphdrlen;
     struct ip *ip;
     struct icmp *icmp;
     struct timeval *tvsend, tvrecv, tvresult;
