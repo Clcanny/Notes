@@ -74,6 +74,7 @@ class IpHeader
         int getHeaderLength();
         bool isIcmp();
         uint8_t *getData();
+        bool check();
 };
 
 /* POD */

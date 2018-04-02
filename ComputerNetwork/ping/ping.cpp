@@ -17,6 +17,39 @@ uint8_t *IpHeader::getData()
     return ((uint8_t *)this) + getHeaderLength();
 }
 
+bool IpHeader::check()
+{
+    uint16_t checksum = headerChecksum;
+    headerChecksum = 0;
+
+    uint16_t *w = (uint16_t *)this;
+    uint32_t sum = 0;
+    int i = 0;
+    for (i = ntohs(datagramLength); i > 1; i -= 2)
+    {
+        sum += *w;
+        w++;
+    }
+    if (i == 1)
+    {
+        uint8_t *p = (uint8_t *)w;
+        p++;
+        sum += *p;
+    }
+    sum += checksum;
+
+    while (sum > 0xFFFF)
+    {
+        sum = (sum >> 16) + (sum & 0xFFFF);
+    }
+    sum = ~sum;
+
+
+    headerChecksum = checksum;
+
+    return (sum & 0xFFFF) == 0;
+}
+
 bool IcmpHeader::check()
 {
     return true;
@@ -84,6 +117,7 @@ int Ping::packIcmp(int pack_no, IcmpHeader* icmp)
 bool Ping::unpackIcmp(char *buf, int len, struct IcmpEchoReply *icmpEchoReply)
 {
     IpHeader *ip = (IpHeader *)buf;
+    assert (ip->check());
     IcmpHeader *icmp = (IcmpHeader *)(ip->getData());
     len -= ip->getHeaderLength();
 
