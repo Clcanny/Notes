@@ -1,5 +1,28 @@
 #include "ping.h"
 
+int IpHeader::getHeaderLength()
+{
+    return headerLength << 2;
+}
+
+bool IpHeader::isIcmp()
+{
+    /* IANA Protocol Numbers 2012 */
+    return upperLayerProtocol == 1;
+}
+
+uint8_t *IpHeader::getData()
+{
+    assert (sizeof(IpHeader) == 20);
+    return ((uint8_t *)this) + getHeaderLength();
+}
+
+uint8_t *IcmpHeader::getData()
+{
+    assert (sizeof(IcmpHeader) == 8);
+    return ((uint8_t *)this) + sizeof(IcmpHeader);
+}
+
 Ping::Ping()
 {
     m_maxPacketSize = 4;
@@ -57,39 +80,33 @@ int Ping::packIcmp(int pack_no, struct icmp* icmp)
 }
 
 bool Ping::unpackIcmp(char *buf, int len, struct IcmpEchoReply *icmpEchoReply)
-{   
-    int i, iphdrlen;
-    struct ip *ip;
-    struct icmp *icmp;
-    struct timeval *tvsend, tvrecv, tvresult;
-    double rtt;
+{
+    IpHeader *ip = (IpHeader *)buf;
+    IcmpHeader *icmp = (IcmpHeader *)(ip->getData());
+    len -= ip->getHeaderLength();
 
-    ip = (struct ip *)buf;
-    /* 求ip报头长度,即ip报头的长度标志乘4 */
-    iphdrlen = ip->ip_hl << 2;
-    /* 越过IP报头，指向ICMP报头 */
-    icmp = (struct icmp *)(buf + iphdrlen);
-    /* ICMP报头及ICMP数据报的总长度 */
-    len -= iphdrlen;
     /* 小于ICMP报头长度则不合理 */
     if (len < 8)
     {
         printf("ICMP packets\'s length is less than 8\n");
         return false;
     }
-    /* 确保所接收的是我所发的的ICMP的回应 */
-    if ((icmp->icmp_type == ICMP_ECHOREPLY) && (icmp->icmp_id == m_pid))
+    /* 确保所接收的是我所发的的ICMP请求的回应 */
+    if ((icmp->type == ICMP_ECHOREPLY) && (icmp->id == m_pid))
     {
-        tvsend = (struct timeval *)icmp->icmp_data;
+        /* 记录发送时间 */
+        struct timeval *tvsend = (struct timeval *)icmp->getData();
         /* 记录接受时间 */
+        struct timeval tvrecv;
         gettimeofday(&tvrecv, NULL);
         /* 接受和发送的时间差 */
-        tvresult = tvSub(tvrecv, *tvsend);
+        struct timeval tvresult = tvSub(tvrecv, *tvsend);
         /* 以毫秒为单位计算RTT */
-        rtt=tvresult.tv_sec*1000 + tvresult.tv_usec/1000;
+        double rtt = tvresult.tv_sec * 1000 + tvresult.tv_usec / 1000;
         icmpEchoReply->rtt = rtt;
-        icmpEchoReply->icmpSeq = icmp->icmp_seq;
-        icmpEchoReply->ipTtl = ip->ip_ttl;
+
+        icmpEchoReply->icmpSeq = icmp->sequence;
+        icmpEchoReply->ipTtl = ip->timeToLive;
         icmpEchoReply->icmpLen = len;
         return true;
     }

@@ -21,6 +21,8 @@
 #include <string>
 #include <vector>
 
+#include <cassert>
+
 #define PACKET_SIZE 4096
 #define MAX_WAIT_TIME 5
 #define MAX_NO_PACKETS 3
@@ -43,6 +45,62 @@ struct PingResult
     std::string ip;
     std::string error;
     std::vector<IcmpEchoReply> icmpEchoReplys;
+};
+
+/* POD */
+class IpHeader
+{
+    public:
+        /* BYTE_ORDER == BIG_ENDIAN */
+        unsigned headerLength:4;
+        unsigned version:4;
+
+        uint8_t typeOfService;
+        uint16_t datagramLength;
+        uint16_t identifier;
+        unsigned flags:3;
+        unsigned fragmentationOffset:13;
+
+        uint8_t timeToLive;
+        uint8_t upperLayerProtocol;
+        uint16_t headerChecksum;
+
+        uint32_t srcIpAddress;
+        uint32_t dstIpAddress;
+
+        /* 不支持options */
+
+    public:
+        int getHeaderLength();
+        bool isIcmp();
+        uint8_t *getData();
+};
+
+/* POD */
+class IcmpHeader
+{
+    public:
+        uint8_t type;
+        uint8_t code;
+        uint16_t checksum;
+        union
+        {
+            struct
+            {
+                uint16_t id;
+                uint16_t sequence;
+            };
+            uint32_t gateway;
+            struct
+            {
+                uint16_t unused;
+                uint16_t mtu;
+            };
+        };
+
+    public:
+        bool check();
+        uint8_t *getData();
 };
 
 class Ping
