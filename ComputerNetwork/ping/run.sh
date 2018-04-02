@@ -4,7 +4,7 @@ docker run -d --name compile gdb:ubuntu
 docker cp ping.h compile:/
 docker cp ping.cpp compile:/
 docker cp main.cpp compile:/
-docker exec compile bash -c "g++ ping.cpp main.cpp -o ping"
+docker exec compile bash -c "g++ -std=c++11 ping.cpp main.cpp -o ping"
 docker cp compile:/ping .
 
 docker network create VMNet --subnet 172.0.0.0/28 --gateway 172.0.0.14

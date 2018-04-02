@@ -113,7 +113,6 @@ struct timeval Ping::tvSub(struct timeval timeval1, struct timeval timeval2)
     return result;
 }
 
-/* 发送三个ICMP报文 */
 bool Ping::sendPacket()
 {   
     size_t packetsize;
@@ -139,10 +138,22 @@ bool Ping::recvPacket(PingResult &pingResult)
     int len;
     extern int errno;
     struct IcmpEchoReply icmpEchoReply;
+
+    /* The first nfds descriptors are checked in each set; i.e., the descriptors from 0 through nfds-1
+     * in the descriptor sets are examined. (Example: If you have set two file descriptors "4" and "17",
+     * nfds should  not be "2", but rather "17 + 1" or "18".)
+     * 也即：大于或等于maxfds的文件描述符不会被检查
+     */
     int maxfds = m_sockfd + 1;
+
     int nfd = 0;
+
+    /* fd_set *restrict readfds, fs_set *restrict writefds, fd_set *restrict errorfds
+     * 以上三个集合分别是select函数能够接受的三个参数，分别代表需要监视的文件描述符集合
+     */
     fd_set rset;
     FD_ZERO(&rset);
+
     socklen_t fromlen = sizeof(m_from_addr);
     struct timeval timeout;
     timeout.tv_sec = 4;
@@ -150,22 +161,34 @@ bool Ping::recvPacket(PingResult &pingResult)
 
     for (int recvCount = 0; recvCount < m_maxPacketSize; recvCount++)
     {
+        /* 把文件描述符m_sockfd添加到readfds集合 */
         FD_SET(m_sockfd, &rset);
-        if ((nfd = select(maxfds, &rset, NULL, NULL, &timeout)) == -1)
+        /* 监听readfds中的文件描述符
+         * select是阻塞型IO，此处有可能导致进程等待
+         */
+        nfd = select(maxfds, &rset, nullptr, nullptr, &timeout);
+
+        if (nfd == -1)
         {
             perror("select error");
             continue;
         }
-        if (nfd == 0)
+        /* 因超时而被唤醒 */
+        else if (nfd == 0)
         {
-            /* recv time out */
             icmpEchoReply.isReply = false;
             pingResult.icmpEchoReplys.push_back(icmpEchoReply);
             continue;
         }
-        if (FD_ISSET(m_sockfd, &rset))
+        /* 因有文件处于可读状态而被唤醒 */
+        else if (FD_ISSET(m_sockfd, &rset))
         {
-            if ((len = recvfrom(m_sockfd, m_recvpacket, sizeof(m_recvpacket), 0, (struct sockaddr *)&m_from_addr, &fromlen)) < 0)
+            /* If address is not a null pointer and the socket is not connection-oriented,
+             * the source address of the message is filled in.
+             * 即m_from_addr不是一个参数而是一个返回结果，告知调用者接收到的包的发送地址
+             */
+            len = recvfrom(m_sockfd, m_recvpacket, sizeof(m_recvpacket), 0, (struct sockaddr *)&m_from_addr, &fromlen);
+            if (len < 0)
             {
                 if(errno == EINTR)
                 {
@@ -174,14 +197,26 @@ bool Ping::recvPacket(PingResult &pingResult)
                 perror("recvfrom error");
                 continue;
             }
+
+            /* The routine inet_ntoa() takes an Internet address and returns an ASCII string representing the address in `.' notation. */
             icmpEchoReply.fromAddr = inet_ntoa(m_from_addr.sin_addr);
-            if (icmpEchoReply.fromAddr != pingResult.ip) {
+            if (icmpEchoReply.fromAddr != pingResult.ip)
+            {
                 /* retry again */
                 recvCount--;
                 continue;
             }
         }
-        if (unpackIcmp(m_recvpacket, len, &icmpEchoReply)==-1)
+        /* 程序因有文件处于可读状态而被唤醒，但并不是m_sockfd
+         * 我们只监听m_sockfd，所以这是不可能的，一定是程序出错
+         */
+        else
+        {
+            perror("bug found");
+            continue;
+        }
+
+        if (unpackIcmp(m_recvpacket, len, &icmpEchoReply) == -1)
         {
             /* retry again */
             recvCount--;
