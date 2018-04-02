@@ -100,7 +100,7 @@ class IcmpHeader
         };
 
     public:
-        bool check();
+        bool check(int length);
         uint8_t *getData();
 };
 

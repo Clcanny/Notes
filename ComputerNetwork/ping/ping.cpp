@@ -1,5 +1,31 @@
 #include "ping.h"
 
+bool check(uint16_t *data, uint16_t checksum, int length)
+{
+    uint32_t sum = 0;
+    int i;
+    for (i = length; i > 1; i -= 2)
+    {
+        sum += *data;
+        data++;
+    }
+    if (i == 1)
+    {
+        uint8_t *p = (uint8_t *)data;
+        p++;
+        sum += *p;
+    }
+    sum += checksum;
+
+    while (sum > 0xFFFF)
+    {
+        sum = (sum >> 16) + (sum & 0xFFFF);
+    }
+    sum = ~sum;
+
+    return (sum & 0xFFFF) == 0;
+}
+
 int IpHeader::getHeaderLength()
 {
     return headerLength << 2;
@@ -22,37 +48,15 @@ bool IpHeader::check()
     uint16_t checksum = headerChecksum;
     headerChecksum = 0;
 
-    uint16_t *w = (uint16_t *)this;
-    uint32_t sum = 0;
-    int i = 0;
-    for (i = ntohs(datagramLength); i > 1; i -= 2)
-    {
-        sum += *w;
-        w++;
-    }
-    if (i == 1)
-    {
-        uint8_t *p = (uint8_t *)w;
-        p++;
-        sum += *p;
-    }
-    sum += checksum;
-
-    while (sum > 0xFFFF)
-    {
-        sum = (sum >> 16) + (sum & 0xFFFF);
-    }
-    sum = ~sum;
-
-
-    headerChecksum = checksum;
-
-    return (sum & 0xFFFF) == 0;
+    return ::check((uint16_t *)this, checksum, ntohs(datagramLength));
 }
 
-bool IcmpHeader::check()
+bool IcmpHeader::check(int length)
 {
-    return true;
+    uint16_t ck = checksum;
+    checksum = 0;
+
+    return ::check((uint16_t *)this, ck, length);
 }
 
 uint8_t *IcmpHeader::getData()
@@ -117,9 +121,12 @@ int Ping::packIcmp(int pack_no, IcmpHeader* icmp)
 bool Ping::unpackIcmp(char *buf, int len, struct IcmpEchoReply *icmpEchoReply)
 {
     IpHeader *ip = (IpHeader *)buf;
+    assert (len == ntohs(ip->datagramLength));
     assert (ip->check());
+
     IcmpHeader *icmp = (IcmpHeader *)(ip->getData());
     len -= ip->getHeaderLength();
+    assert (icmp->check(len));
 
     /* 小于ICMP报头长度则不合理 */
     if (len < 8)
