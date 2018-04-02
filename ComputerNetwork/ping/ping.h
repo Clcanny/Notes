@@ -125,7 +125,7 @@ class Ping
 
     private:
         uint16_t getChecksum(uint16_t *addr, int len);
-        int packIcmp(int pack_no, struct icmp* icmp);
+        int packIcmp(int pack_no, IcmpHeader *icmp);
         bool unpackIcmp(char *buf,int len, struct IcmpEchoReply *icmpEchoReply);
         struct timeval tvSub(struct timeval timeval1,struct timeval timval2);
         bool getsockaddr(const char * hostOrIp, sockaddr_in* sockaddr);

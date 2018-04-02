@@ -17,6 +17,11 @@ uint8_t *IpHeader::getData()
     return ((uint8_t *)this) + getHeaderLength();
 }
 
+bool IcmpHeader::check()
+{
+    return true;
+}
+
 uint8_t *IcmpHeader::getData()
 {
     assert (sizeof(IcmpHeader) == 8);
@@ -59,23 +64,20 @@ uint16_t Ping::getChecksum(uint16_t *addr, int len)
     return answer;
 }
 
-int Ping::packIcmp(int pack_no, struct icmp* icmp)
+int Ping::packIcmp(int pack_no, IcmpHeader* icmp)
 {   
-    int i, packsize;
-    struct icmp *picmp;
-    struct timeval *tval;
+    icmp->type = ICMP_ECHO;
+    icmp->code = 0;
+    icmp->checksum = 0;
+    icmp->id = m_pid;
+    icmp->sequence = pack_no;
 
-    picmp = icmp;
-    picmp->icmp_type = ICMP_ECHO;
-    picmp->icmp_code = 0;
-    picmp->icmp_cksum = 0;
-    picmp->icmp_seq = pack_no;
-    picmp->icmp_id = m_pid;
-    packsize = 8 + m_datalen;
-    tval = (struct timeval *)icmp->icmp_data;
-    /* 记录发送时间 */
+    struct timeval *tval = (struct timeval *)icmp->getData();
     gettimeofday(tval, NULL);
-    picmp->icmp_cksum = getChecksum((uint16_t *)icmp, packsize);
+
+    int packsize = sizeof(IcmpHeader) + m_datalen;
+    icmp->checksum = getChecksum((uint16_t *)icmp, packsize);
+
     return packsize;
 }
 
@@ -138,7 +140,7 @@ bool Ping::sendPacket()
         m_nsend++;
         m_icmp_seq++;
         /* 设置ICMP报头 */
-        packetsize = packIcmp(m_icmp_seq, (struct icmp*)m_sendpacket);
+        packetsize = packIcmp(m_icmp_seq, (IcmpHeader *)m_sendpacket);
 
         if (sendto(m_sockfd, m_sendpacket, packetsize, 0, (struct sockaddr*)&m_dest_addr, sizeof(m_dest_addr)) < 0)
         {
