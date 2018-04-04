@@ -115,3 +115,37 @@ bool IpHeader::getFlagMoreFragments()
 {
     return flags & 1;
 }
+
+void IpHeader::print()
+{
+    printf("headerLength: %d, version: %d, identifier: %d, ttl: %d\n",
+            headerLength, version, identifier, timeToLive);
+}
+
+void IcmpHeader::print()
+{
+    printf("type: %d, code: %d, id: %d, sequence: %d\n", type, code, id, sequence);
+}
+
+void IcmpHeader::toHost()
+{
+    id = ntohs(id);
+    sequence = ntohs(sequence);
+}
+
+void UdpHeader::toHost()
+{
+    srcPort = ntohs(srcPort);
+    dstPort = ntohs(dstPort);
+}
+
+void UdpHeader::print()
+{
+    printf("source port: %d, destination port: %d, length: %d\n", srcPort, dstPort, length);
+}
+
+uint8_t *UdpHeader::getData()
+{
+    assert (sizeof(Udpheader) == 8);
+    return ((uint8_t *)this) + sizeof(UdpHeader);
+}

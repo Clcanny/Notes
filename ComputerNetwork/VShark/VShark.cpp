@@ -71,8 +71,29 @@ int main()
                 assert (false);
             }
 
-            printf("%x-%x\n", ip->upperLayerProtocol, IPPROTO_ICMP);
-            printf("%d\n", ip->check());
+            /* printf("%x-%x\n", ip->upperLayerProtocol, IPPROTO_ICMP); */
+            /* printf("%d\n", ip->check()); */
+            /* ip->print(); */
+            /* printf("%d\n", ip->upperLayerProtocol); */
+            switch (ip->upperLayerProtocol)
+            {
+                case IPPROTO_ICMP:
+                {
+                    IcmpHeader *icmp = (IcmpHeader *)ip->getData();
+                    icmp->toHost();
+                    icmp->print();
+                    break;
+                }
+
+                case IPPROTO_UDP:
+                {
+                    printf("udp\n");
+                    UdpHeader *udp = (UdpHeader *)ip->getData();
+                    udp->toHost();
+                    udp->print();
+                    break;
+                }
+            }
         }
         else if (mac->isArp())
         {

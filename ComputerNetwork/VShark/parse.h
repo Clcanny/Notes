@@ -57,6 +57,8 @@ class IpHeader
         bool check();
         bool getFlagDontFragment();
         bool getFlagMoreFragments();
+        void print();
+        void toHost();
 };
 
 class IcmpHeader
@@ -79,6 +81,25 @@ class IcmpHeader
                 uint16_t mtu;
             };
         };
+
+    public:
+        void print();
+        void toHost();
+};
+
+class UdpHeader
+{
+    public:
+        uint16_t srcPort;
+        uint16_t dstPort;
+
+        uint16_t length;
+        uint16_t checksum;
+
+    public:
+        bool check();
+        void print();
+        void toHost();
 };
 
 class TcpHeader
@@ -108,10 +129,6 @@ class TcpHeader
     public:
         bool check(int length);
         uint8_t *getData();
-};
-
-class UdpHeadr
-{
 };
 
 class HttpHeader
