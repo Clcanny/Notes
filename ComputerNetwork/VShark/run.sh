@@ -33,6 +33,17 @@
 # docker network rm VMNet1 VMNet2
 # rm VShark
 
+# docker network create VMNet --subnet 172.0.0.0/28 --gateway 172.0.0.14
+
+# docker run -d --name httpServer network:ubuntu
+# docker network connect VMNet httpServer --ip 172.0.0.1
+# docker network disconnect bridge httpServer
+# docker cp HttpServer httpServer:/
+# docker exec -d httpServer bash -c "./httpServer"
+
+# docker network connect VMNet compile --ip 172.0.0.2
+# docker network disconnect bridge compile
+
 docker cp VShark.cpp compile:/
 docker cp parse.h compile:/
 docker cp parse.cpp compile:/

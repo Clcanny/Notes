@@ -75,14 +75,14 @@ bool check(uint16_t *data, uint16_t checksum, int length)
     return (sum & 0xFFFF) == 0;
 }
 
-int IpHeader::getHeaderLength()
-{
-    return headerLength << 2;
-}
-
 uint16_t IpHeader::getDatagramLength()
 {
-    return ntohs(datagramLength);
+    return datagramLength;
+}
+
+void IpHeader::toHost()
+{
+    datagramLength = ntohs(datagramLength);
 }
 
 bool IpHeader::isIcmp()
@@ -116,6 +116,11 @@ bool IpHeader::getFlagMoreFragments()
     return flags & 1;
 }
 
+int IpHeader::getHeaderLength()
+{
+    return headerLength << 4;
+}
+
 void IpHeader::print()
 {
     printf("headerLength: %d, version: %d, identifier: %d, ttl: %d\n",
@@ -146,6 +151,6 @@ void UdpHeader::print()
 
 uint8_t *UdpHeader::getData()
 {
-    assert (sizeof(Udpheader) == 8);
+    assert (sizeof(UdpHeader) == 8);
     return ((uint8_t *)this) + sizeof(UdpHeader);
 }
