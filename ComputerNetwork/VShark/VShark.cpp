@@ -2,7 +2,8 @@
 #include <sys/socket.h> 
 #include <sys/types.h> 
 #include <arpa/inet.h>
-#include <iostream>
+#include <stdio.h>
+#include <cassert>
 
 #include "parse.h"
 
@@ -22,19 +23,65 @@ int main()
     char buffer[BUFFER_MAX];
     while(1)
     {
+        /* buffer中不包含Preamble和CRC */
         int n_read = recvfrom(sock_fd, buffer, sizeof(buffer), 0, nullptr, nullptr);
         if (n_read < 42)
         {
             return -1;
         }
+
+        /* mac中不包含Preamble和CRC */
         MacHeader *mac = (MacHeader *)buffer;
         mac->toHost();
-        mac->printAddress(true);
-        mac->printAddress(false);
-        /* printf("MAC address: %.2x:%02x:%02x:%02x:%02x:%02x" */
-        /*        "==> %.2x:%02x:%02x:%02x:%02x:%02x\n", */
-        /*        mac->srcAddress[0], mac->srcAddress[1], mac->srcAddress[2], mac->srcAddress[3], mac->srcAddress[4], mac->srcAddress[5], */
-        /*        mac->dstAddress[0], mac->dstAddress[1], mac->dstAddress[2], mac->dstAddress[3], mac->dstAddress[4], mac->dstAddress[5]); */
+        /* mac->printAddress(true); */
+        /* mac->printAddress(false); */
+
+        if (mac->isIp())
+        {
+            IpHeader *ip = (IpHeader *)(mac->getData());
+            if (ip->getFlagMoreFragments() == 0 && ip->fragmentationOffset == 0)
+            {
+                assert (ip->getDatagramLength() == n_read - sizeof(MacHeader));
+            }
+            else
+            {
+                /* To allow the destination host to perform these reassembly tasks,
+                 * the designers of IP (version 4) put identification, flag, and fragmentation offset
+                 * fields in the IP datagram header.
+                 *
+                 * When a datagram is created, the sending host stamps the datagram with an identification
+                 * number as well as source and destination addresses. Typically, the sending host increments the
+                 * identification number for each datagram it sends. When a router needs to fragment a
+                 * datagram, each resulting datagram (that is, fragment) is stamped with the source
+                 * address, destination address, and identification number of the original datagram.
+                 *
+                 * When the destination receives a series of datagrams from the same sending host, it
+                 * can examine the identification numbers of the datagrams to determine which of the
+                 * datagrams are actually fragments of the same larger datagram.
+                 *
+                 * Because IP is an unreliable service, one or more of the fragments may never arrive
+                 * at the destination. For this reason, in order for the destination host to be absolutely
+                 * sure it has received the last fragment of the original datagram, the last fragment
+                 * has a flag bit set to 0, whereas all the other fragments have this flag bit set to 1.
+                 *
+                 * Also, in order for the destination host to determine whether a fragment is missing (and also
+                 * to be able to reassemble the fragments in their proper order), the offset field is used to specify
+                 * where the fragment fits within the original IP datagram.
+                 */
+                assert (false);
+            }
+
+            printf("%x-%x\n", ip->upperLayerProtocol, IPPROTO_ICMP);
+            printf("%d\n", ip->check());
+        }
+        else if (mac->isArp())
+        {
+            printf("arp\n");
+        }
+        else
+        {
+            continue;
+        }
 
         /* char *eth_head = buffer; */
         /* char *p = eth_head; */

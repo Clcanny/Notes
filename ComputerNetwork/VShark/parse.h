@@ -21,6 +21,8 @@ class MacHeader
         bool check(int length);
         uint8_t *getData();
         void printAddress(bool isSrc);
+        bool isIp();
+        bool isArp();
 };
 
 class IpHeader
@@ -32,11 +34,13 @@ class IpHeader
 
         uint8_t typeOfService;
         uint16_t datagramLength;
+
         uint16_t identifier;
         unsigned flags:3;
         unsigned fragmentationOffset:13;
 
         uint8_t timeToLive;
+        /* IPPROTO_ICMP */
         uint8_t upperLayerProtocol;
         uint16_t headerChecksum;
 
@@ -47,9 +51,12 @@ class IpHeader
 
     public:
         int getHeaderLength();
+        uint16_t getDatagramLength();
         bool isIcmp();
         uint8_t *getData();
         bool check();
+        bool getFlagDontFragment();
+        bool getFlagMoreFragments();
 };
 
 class IcmpHeader
