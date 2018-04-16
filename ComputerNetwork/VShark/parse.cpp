@@ -86,13 +86,6 @@ void IpHeader::toHost()
     flagsFragmentationOffset = ntohs(flagsFragmentationOffset);
     srcIpAddress = ntohl(srcIpAddress);
     dstIpAddress = ntohl(dstIpAddress);
-
-    /* uint16_t *p = &identifier + 1; */
-    /* *p = ntohs(*p); */
-    /* printf("fuck: %x\n", *p); */
-    /* printf("MF: %u\n", flags & 0x1); */
-    /* printf("fragmentationOffset: %u\n", fragmentationOffset); */
-    /* printf("fragmentationOffset: %u\n", (*p) & 0x00ffffff); */
 }
 
 bool IpHeader::isIcmp()

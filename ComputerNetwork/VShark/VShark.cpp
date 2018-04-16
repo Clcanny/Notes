@@ -72,7 +72,6 @@ int main()
                  */
                 /* printf("fragmentationOffset: %d\n", ip->fragmentationOffset); */
                 /* assert (false); */
-                printf("fuck u.\n");
             }
 
             switch (ip->upperLayerProtocol)
