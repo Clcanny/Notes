@@ -69,43 +69,39 @@ int main()
                  * to be able to reassemble the fragments in their proper order), the offset field is used to specify
                  * where the fragment fits within the original IP datagram.
                  */
-                printf("fragmentationOffset: %d, length: %d\n", ip->fragmentationOffset << 3, ip->getDatagramLength() - ip->getHeaderLength());
+                printf("fragmentationOffset: %d\n", ip->fragmentationOffset);
                 /* assert (false); */
             }
 
-            /* printf("%x-%x\n", ip->upperLayerProtocol, IPPROTO_ICMP); */
-            /* printf("%d\n", ip->check()); */
-            /* ip->print(); */
-            /* printf("%d\n", ip->upperLayerProtocol); */
             switch (ip->upperLayerProtocol)
             {
                 case IPPROTO_ICMP:
                 {
                     IcmpHeader *icmp = (IcmpHeader *)ip->getData();
                     icmp->toHost();
-                    icmp->print();
+                    /* icmp->print(); */
                     break;
                 }
 
                 case IPPROTO_UDP:
                 {
-                    printf("udp\n");
-                    UdpHeader *udp = (UdpHeader *)ip->getData();
+                    /* printf("udp\n"); */
+                    UdpHeader *udp = (UdpHeader *)(ip->getData());
                     udp->toHost();
-                    udp->print();
+                    /* udp->print(); */
                     break;
                 }
 
                 case IPPROTO_TCP:
                 {
-                    printf("tcp\n");
+                    /* printf("tcp\n"); */
                     break;
                 }
             }
         }
         else if (mac->isArp())
         {
-            printf("arp\n");
+            /* printf("arp\n"); */
         }
         else
         {
