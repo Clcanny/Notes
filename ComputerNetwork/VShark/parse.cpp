@@ -193,9 +193,10 @@ void TcpHeader::toHost()
     urgentDataPointer = ntohs(urgentDataPointer);
 }
 
-uint8_t TcpHeader::getHeaderLength()
+uint16_t TcpHeader::getHeaderLength()
 {
-    return (mixFields & 0xF000) >> 24;
+    /* 12 - 2 = 10 */
+    return (mixFields & 0xF000) >> 10;
 }
 
 uint8_t TcpHeader::getFlags()
@@ -209,8 +210,8 @@ void TcpHeader::print()
     printf("sequenceNumber: %u, ackNumber: %u\n", sequenceNumber, ackNumber);
     /* printf("headerLength: %u, urg: %d, ack: %u, psh: %u, rst: %u, syn: %u, fin: %u\n", */
     /*         headerLength, urg, ack, psh, rst, syn, fin); */
-    /* printf("receiveWindow: %u, urgentDataPointer: %u\n", receiveWindow, urgentDataPointer); */
-    /* printf("fuck: %x\n", mixFields); */
+    printf("headerLength: %u\n", getHeaderLength());
+    printf("receiveWindow: %u, urgentDataPointer: %u\n", receiveWindow, urgentDataPointer);
     printf("urg:%u, ack: %d, psh: %u, rst: %u, syn: %u, fin: %u\n",
             (mixFields & 0x0020) >> 5,
             (mixFields & 0x0010) >> 4,

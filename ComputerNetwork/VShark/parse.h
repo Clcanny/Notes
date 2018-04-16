@@ -134,7 +134,7 @@ class TcpHeader
         bool check(int length);
         void toHost();
         void print();
-        uint8_t getHeaderLength();
+        uint16_t getHeaderLength();
         uint8_t getFlags();
         uint8_t *getData();
 };
