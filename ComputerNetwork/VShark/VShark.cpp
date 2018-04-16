@@ -40,7 +40,8 @@ int main()
         {
             IpHeader *ip = (IpHeader *)(mac->getData());
             ip->toHost();
-            if (ip->getFlagMoreFragments() == 0 && ip->fragmentationOffset == 0)
+            ip->print();
+            if (ip->getFlagMoreFragments() == 0 && ip->getFragmentationOffset() == 0)
             {
                 assert (ip->getDatagramLength() == n_read - sizeof(MacHeader));
             }
@@ -69,8 +70,9 @@ int main()
                  * to be able to reassemble the fragments in their proper order), the offset field is used to specify
                  * where the fragment fits within the original IP datagram.
                  */
-                printf("fragmentationOffset: %d\n", ip->fragmentationOffset);
+                /* printf("fragmentationOffset: %d\n", ip->fragmentationOffset); */
                 /* assert (false); */
+                printf("fuck u.\n");
             }
 
             switch (ip->upperLayerProtocol)

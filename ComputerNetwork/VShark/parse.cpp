@@ -83,6 +83,16 @@ uint16_t IpHeader::getDatagramLength()
 void IpHeader::toHost()
 {
     datagramLength = ntohs(datagramLength);
+    flagsFragmentationOffset = ntohs(flagsFragmentationOffset);
+    srcIpAddress = ntohl(srcIpAddress);
+    dstIpAddress = ntohl(dstIpAddress);
+
+    /* uint16_t *p = &identifier + 1; */
+    /* *p = ntohs(*p); */
+    /* printf("fuck: %x\n", *p); */
+    /* printf("MF: %u\n", flags & 0x1); */
+    /* printf("fragmentationOffset: %u\n", fragmentationOffset); */
+    /* printf("fragmentationOffset: %u\n", (*p) & 0x00ffffff); */
 }
 
 bool IpHeader::isIcmp()
@@ -101,19 +111,24 @@ bool IpHeader::check()
 {
     uint16_t checksum = headerChecksum;
     /* headerChecksum = 0; */
-    assert ((flags & 4) == 0); 
+    assert ((flagsFragmentationOffset & 0x8000) == 0); 
 
     return ::check((uint16_t *)this, checksum, getDatagramLength());
 }
 
 bool IpHeader::getFlagDontFragment()
 {
-    return flags >> 1;
+    return flagsFragmentationOffset & 0x4000;
 }
 
 bool IpHeader::getFlagMoreFragments()
 {
-    return flags & 1;
+    return flagsFragmentationOffset & 0x2000;
+}
+
+uint16_t IpHeader::getFragmentationOffset()
+{
+    return flagsFragmentationOffset & 0x1FFF;
 }
 
 int IpHeader::getHeaderLength()
@@ -125,6 +140,19 @@ void IpHeader::print()
 {
     printf("headerLength: %d, version: %d, identifier: %d, ttl: %d\n",
             headerLength, version, identifier, timeToLive);
+    printf("Zero: %d, DF: %d, MF: %d, fragmentationOffset: %u\n",
+            flagsFragmentationOffset & 0x8000,
+            getFlagDontFragment(),
+            getFlagMoreFragments(),
+            getFragmentationOffset());
+    printf("srcIp: %u.%u.%u.%u\n", (srcIpAddress & 0xff000000) >> 24,
+                                   (srcIpAddress & 0x00ff0000) >> 16,
+                                   (srcIpAddress & 0x0000ff00) >> 8,
+                                   (srcIpAddress & 0x000000ff));
+    printf("dstIp: %u.%u.%u.%u\n", (dstIpAddress & 0xff000000) >> 24,
+                                   (dstIpAddress & 0x00ff0000) >> 16,
+                                   (dstIpAddress & 0x0000ff00) >> 8,
+                                   (dstIpAddress & 0x000000ff));
 }
 
 void IcmpHeader::print()

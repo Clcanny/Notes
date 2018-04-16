@@ -37,15 +37,8 @@ class IpHeader
 
         uint16_t identifier;
 
-        /* 0 DF MF fragmentOffset 
-         * 在struct ip中有以下定义
-         * #define IP_DF 0x4000
-         * #define IP_MF 0x2000
-         * 说明在接收到的字节中，flags处在16位的前3位
-         * 因此不需要进行字节顺序的转换
-         */
-        unsigned flags:3;
-        unsigned fragmentationOffset:13;
+        /* 0 DF MF fragmentOffset */
+        uint16_t flagsFragmentationOffset;
 
         uint8_t timeToLive;
         /* IPPROTO_ICMP */
@@ -65,6 +58,7 @@ class IpHeader
         bool check();
         bool getFlagDontFragment();
         bool getFlagMoreFragments();
+        uint16_t getFragmentationOffset();
         void print();
         void toHost();
 };
