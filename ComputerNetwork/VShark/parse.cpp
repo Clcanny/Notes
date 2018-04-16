@@ -163,6 +163,7 @@ void UdpHeader::toHost()
 {
     srcPort = ntohs(srcPort);
     dstPort = ntohs(dstPort);
+    length = ntohs(length);
 }
 
 void UdpHeader::print()

@@ -86,10 +86,10 @@ int main()
 
                 case IPPROTO_UDP:
                 {
-                    /* printf("udp\n"); */
                     UdpHeader *udp = (UdpHeader *)(ip->getData());
                     udp->toHost();
-                    /* udp->print(); */
+                    assert (udp->length == n_read - sizeof(MacHeader) - sizeof(IpHeader));
+                    udp->print();
                     break;
                 }
 
