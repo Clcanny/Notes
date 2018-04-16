@@ -14,7 +14,7 @@
 
 int main()
 {
-    int sock_fd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_IP | ETH_P_ARP));
+    int sock_fd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (sock_fd < 0)
     {
         return -1;
