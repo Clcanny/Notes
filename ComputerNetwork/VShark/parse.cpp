@@ -175,3 +175,25 @@ uint8_t *UdpHeader::getData()
     assert (sizeof(UdpHeader) == 8);
     return ((uint8_t *)this) + sizeof(UdpHeader);
 }
+
+void TcpHeader::toHost()
+{
+    srcPort = ntohs(srcPort);
+    dstPort = ntohs(dstPort);
+    sequenceNumber = ntohl(sequenceNumber);
+    ackNumber = ntohl(ackNumber);
+
+    uint16_t *p = &receiveWindow - 1;
+    *p = ntohs(*p);
+
+    receiveWindow = ntohs(receiveWindow);
+    urgentDataPointer = ntohs(urgentDataPointer);
+}
+
+void TcpHeader::print()
+{
+    printf("srcPort: %u, dstPort: %u\n", srcPort, dstPort);
+    printf("sequenceNumber: %u, ackNumber: %u\n", sequenceNumber, ackNumber);
+    printf("headerLength: %u, urg: %d, ack: %u, psh: %u, rst: %u, syn: %u, fin: %u\n",
+            headerLength, urg, ack, psh, rst, syn, fin);
+}

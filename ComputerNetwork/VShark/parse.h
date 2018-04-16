@@ -114,14 +114,14 @@ class TcpHeader
         uint32_t sequenceNumber;
         uint32_t ackNumber;
         
-        unsigned headerLength:4;
-        unsigned unused:6;
-        bool urg;
-        bool ack;
-        bool psh;
-        bool rst;
-        bool syn;
-        bool fin;
+        uint16_t headerLength:4,
+                 unused:6,
+                 urg:1,
+                 ack:1,
+                 psh:1,
+                 rst:1,
+                 syn:1,
+                 fin:1;
         uint16_t receiveWindow;
 
         uint16_t internetChecksum;
@@ -131,6 +131,8 @@ class TcpHeader
 
     public:
         bool check(int length);
+        void toHost();
+        void print();
         uint8_t *getData();
 };
 

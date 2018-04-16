@@ -40,7 +40,7 @@ int main()
         {
             IpHeader *ip = (IpHeader *)(mac->getData());
             ip->toHost();
-            ip->print();
+            /* ip->print(); */
             if (ip->getFlagMoreFragments() == 0 && ip->getFragmentationOffset() == 0)
             {
                 assert (ip->getDatagramLength() == n_read - sizeof(MacHeader));
@@ -96,6 +96,9 @@ int main()
                 case IPPROTO_TCP:
                 {
                     /* printf("tcp\n"); */
+                    TcpHeader *tcp = (TcpHeader *)(ip->getData());
+                    tcp->toHost();
+                    tcp->print();
                     break;
                 }
             }
