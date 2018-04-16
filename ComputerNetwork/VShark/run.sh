@@ -52,3 +52,5 @@ docker cp compile:/a.out a.out
 docker cp a.out network:/a.out
 rm a.out
 docker start -a -i network
+# apt-get install arp-scan
+# docker exec -it network arp-scan 172.17.0.1

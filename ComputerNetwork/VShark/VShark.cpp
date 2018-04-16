@@ -14,7 +14,7 @@
 
 int main()
 {
-    int sock_fd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_IP));
+    int sock_fd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_IP | ETH_P_ARP));
     if (sock_fd < 0)
     {
         return -1;
@@ -106,7 +106,9 @@ int main()
         }
         else if (mac->isArp())
         {
-            /* printf("arp\n"); */
+            ArpHeader *arpHeader = (ArpHeader *)(mac->getData());
+            arpHeader->toHost();
+            arpHeader->print();
         }
         else
         {
