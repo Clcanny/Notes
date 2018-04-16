@@ -114,14 +114,6 @@ class TcpHeader
         uint32_t sequenceNumber;
         uint32_t ackNumber;
         
-        /* uint16_t headerLength:4, */
-        /*          unused:6, */
-        /*          urg:1, */
-        /*          ack:1, */
-        /*          psh:1, */
-        /*          rst:1, */
-        /*          syn:1, */
-        /*          fin:1; */
         uint16_t mixFields;
         uint16_t receiveWindow;
 

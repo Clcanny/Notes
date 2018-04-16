@@ -95,7 +95,6 @@ int main()
 
                 case IPPROTO_TCP:
                 {
-                    /* printf("tcp\n"); */
                     TcpHeader *tcp = (TcpHeader *)(ip->getData());
                     tcp->toHost();
                     tcp->print();

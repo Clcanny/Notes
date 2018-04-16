@@ -208,8 +208,6 @@ void TcpHeader::print()
 {
     printf("srcPort: %u, dstPort: %u\n", srcPort, dstPort);
     printf("sequenceNumber: %u, ackNumber: %u\n", sequenceNumber, ackNumber);
-    /* printf("headerLength: %u, urg: %d, ack: %u, psh: %u, rst: %u, syn: %u, fin: %u\n", */
-    /*         headerLength, urg, ack, psh, rst, syn, fin); */
     printf("headerLength: %u\n", getHeaderLength());
     printf("receiveWindow: %u, urgentDataPointer: %u\n", receiveWindow, urgentDataPointer);
     printf("urg:%u, ack: %d, psh: %u, rst: %u, syn: %u, fin: %u\n",
