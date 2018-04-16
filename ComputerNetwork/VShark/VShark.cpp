@@ -70,7 +70,7 @@ int main()
                  * to be able to reassemble the fragments in their proper order), the offset field is used to specify
                  * where the fragment fits within the original IP datagram.
                  */
-                /* printf("fragmentationOffset: %d\n", ip->fragmentationOffset); */
+                /* printf("fragmentationOffset: %d\n", ip->getFragmentationOffset()); */
                 /* assert (false); */
             }
 
@@ -99,6 +99,8 @@ int main()
                     TcpHeader *tcp = (TcpHeader *)(ip->getData());
                     tcp->toHost();
                     tcp->print();
+                    printf("\n");
+                    tcp->getData();
                     break;
                 }
             }

@@ -48,4 +48,7 @@ docker cp VShark.cpp compile:/
 docker cp parse.h compile:/
 docker cp parse.cpp compile:/
 docker exec compile bash -c "g++ -Wall -g -std=c++11 VShark.cpp parse.cpp"
-docker start -a -i compile
+docker cp compile:/a.out a.out
+docker cp a.out network:/a.out
+rm a.out
+docker start -a -i network

@@ -126,7 +126,7 @@ uint16_t IpHeader::getFragmentationOffset()
 
 int IpHeader::getHeaderLength()
 {
-    return headerLength << 4;
+    return headerLength << 2;
 }
 
 void IpHeader::print()
@@ -183,17 +183,46 @@ void TcpHeader::toHost()
     sequenceNumber = ntohl(sequenceNumber);
     ackNumber = ntohl(ackNumber);
 
-    uint16_t *p = &receiveWindow - 1;
-    *p = ntohs(*p);
+    /* uint16_t *p = &receiveWindow - 1; */
+    /* *p = ntohs(*p); */
+    /* assert (unused == 0); */
+    mixFields = ntohs(mixFields);
+    assert ((mixFields & 0x0FC0) == 0);
 
     receiveWindow = ntohs(receiveWindow);
     urgentDataPointer = ntohs(urgentDataPointer);
+}
+
+uint8_t TcpHeader::getHeaderLength()
+{
+    return (mixFields & 0xF000) >> 24;
+}
+
+uint8_t TcpHeader::getFlags()
+{
+    return mixFields & 0x003F;
 }
 
 void TcpHeader::print()
 {
     printf("srcPort: %u, dstPort: %u\n", srcPort, dstPort);
     printf("sequenceNumber: %u, ackNumber: %u\n", sequenceNumber, ackNumber);
-    printf("headerLength: %u, urg: %d, ack: %u, psh: %u, rst: %u, syn: %u, fin: %u\n",
-            headerLength, urg, ack, psh, rst, syn, fin);
+    /* printf("headerLength: %u, urg: %d, ack: %u, psh: %u, rst: %u, syn: %u, fin: %u\n", */
+    /*         headerLength, urg, ack, psh, rst, syn, fin); */
+    /* printf("receiveWindow: %u, urgentDataPointer: %u\n", receiveWindow, urgentDataPointer); */
+    /* printf("fuck: %x\n", mixFields); */
+    printf("urg:%u, ack: %d, psh: %u, rst: %u, syn: %u, fin: %u\n",
+            (mixFields & 0x0020) >> 5,
+            (mixFields & 0x0010) >> 4,
+            (mixFields & 0x0008) >> 3,
+            (mixFields & 0x0004) >> 2,
+            (mixFields & 0x0002) >> 1,
+            (mixFields & 0x0001)
+          );
+}
+
+uint8_t *TcpHeader::getData()
+{
+    assert (sizeof(TcpHeader) == 20);
+    return (uint8_t *)(this) + sizeof(TcpHeader);
 }
