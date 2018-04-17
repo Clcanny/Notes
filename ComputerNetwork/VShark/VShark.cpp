@@ -35,6 +35,8 @@ int main()
             return -1;
         }
 
+        uint8_t *content = nullptr;
+
         /* mac中不包含Preamble和CRC */
         MacHeader *mac = (MacHeader *)buffer;
         mac->toHost();
@@ -56,6 +58,7 @@ int main()
                     icmp->toHost();
                     icmp->check(n_read);
                     n_read -= icmp->print();
+                    content = icmp->getData();
                     break;
                 }
 
@@ -65,6 +68,7 @@ int main()
                     udp->toHost();
                     udp->check(n_read);
                     n_read -= udp->print();
+                    content = udp->getData();
                     break;
                 }
 
@@ -73,6 +77,7 @@ int main()
                     TcpHeader *tcp = (TcpHeader *)(ip->getData());
                     tcp->toHost();
                     n_read -= tcp->print();
+                    content = tcp->getData();
                     break;
                 }
             }
@@ -81,12 +86,28 @@ int main()
         {
             ArpHeader *arpHeader = (ArpHeader *)(mac->getData());
             arpHeader->toHost();
-            arpHeader->print();
+            n_read -= arpHeader->print();
+            content = arpHeader->getData();
         }
         else
         {
             continue;
         }
+
+        if (content != nullptr && n_read != 0)
+        {
+            printf("content:\n");
+            for (uint32_t i = 0; i < n_read; i++)
+            {
+                printf(" %02x", content[i]);
+                if((i + 1) % 16 ==0)
+                {
+                    printf("\n");
+                }
+            }
+            printf("\n");
+        }
+        printf("\n");
 
         /* char *eth_head = buffer; */
         /* char *p = eth_head; */

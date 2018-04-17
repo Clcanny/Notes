@@ -28,6 +28,7 @@ class IcmpHeader
         void check(uint32_t length);
         void toHost();
         uint32_t print();
+        uint8_t *getData();
 };
 
 #endif

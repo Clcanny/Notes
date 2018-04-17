@@ -39,7 +39,7 @@ uint32_t TcpHeader::print()
 uint8_t *TcpHeader::getData()
 {
     assert (sizeof(TcpHeader) == 20);
-    return (uint8_t *)(this) + sizeof(TcpHeader);
+    return (uint8_t *)(this) + getHeaderLength();
 }
 
 uint16_t TcpHeader::getHeaderLength()

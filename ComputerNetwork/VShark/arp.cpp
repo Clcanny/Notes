@@ -46,3 +46,8 @@ uint32_t ArpHeader::print()
 
     return sizeof(ArpHeader);
 }
+
+uint8_t *ArpHeader::getData()
+{
+    return ((uint8_t *)this) + sizeof(ArpHeader);
+}

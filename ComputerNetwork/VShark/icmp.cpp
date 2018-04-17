@@ -20,3 +20,8 @@ uint32_t IcmpHeader::print()
     printf("type: %d, code: %d, id: %d, sequence: %d\n", type, code, id, sequence);
     return sizeof(IcmpHeader);
 }
+
+uint8_t *IcmpHeader::getData()
+{
+    return ((uint8_t *)this) + sizeof(IcmpHeader);
+}
