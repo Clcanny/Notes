@@ -1,68 +1,32 @@
-# #!/bin/bash
+#!/bin/bash
 
-# docker run -d --name compile gdb:ubuntu
-# docker cp VShark.cpp compile:/
-# docker exec compile bash -c "g++ -Wall -g -std=c++11 VShark.cpp -o VShark"
-# docker cp compile:/VShark VShark
-
-# docker network create VMNet1 --subnet 172.0.1.0/28 --gateway 172.0.1.14
-# docker network create VMNet2 --subnet 172.0.2.0/28 --gateway 172.0.2.14
-
-# docker run -d --name router network:ubuntu
-# docker network connect VMNet1 router --ip 172.0.1.1
-# docker network connect VMNet2 router --ip 172.0.2.1
-# docker network disconnect bridge router
-
-# docker run -d --privileged --name container1 --network VMNet1 --ip 172.0.1.2 network:ubuntu
-# # docker network connect VMNet1 container1 --ip 172.0.1.2
-# # docker network disconnect bridge container1
-# docker cp VShark container1:/
-# docker exec -d container1 bash -c "./VShark > output"
-# docker exec container1 bash -c "ip route change default via 172.0.1.1 dev eth0"
-
-# docker run -d --privileged --name container2 network:ubuntu
-# docker network connect VMNet2 container2 --ip 172.0.2.2
-# docker network disconnect bridge container2
-# docker exec container2 bash -c "ip route change default via 172.0.2.1 dev eth1"
-# docker exec container2 bash -c "ping 172.0.1.2 -c 4"
-
-# docker exec container1 bash -c "cat output"
-# docker logs container2
-
-# docker rm -f compile router container1 container2
-# docker network rm VMNet1 VMNet2
-# rm VShark
-
-# docker network create VMNet --subnet 172.0.0.0/28 --gateway 172.0.0.14
-
-# docker run -d --name httpServer network:ubuntu
-# docker network connect VMNet httpServer --ip 172.0.0.1
-# docker network disconnect bridge httpServer
-# docker cp HttpServer httpServer:/
-# docker exec -d httpServer bash -c "./httpServer"
-
-# docker network connect VMNet compile --ip 172.0.0.2
-# docker network disconnect bridge compile
+docker run -d --name compile gdb:ubuntu
+docker run -d --privileged --name network network:ubuntu
 
 docker cp VShark.cpp compile:/
-docker cp helper.h compile:/
-docker cp helper.cpp compile:/
-docker cp arp.h compile:/
-docker cp arp.cpp compile:/
-docker cp icmp.h compile:/
-docker cp icmp.cpp compile:/
-docker cp ip.h compile:/
-docker cp ip.cpp compile:/
 docker cp mac.h compile:/
 docker cp mac.cpp compile:/
-docker cp tcp.h compile:/
-docker cp tcp.cpp compile:/
+docker cp arp.h compile:/
+docker cp arp.cpp compile:/
+docker cp ip.h compile:/
+docker cp ip.cpp compile:/
+docker cp icmp.h compile:/
+docker cp icmp.cpp compile:/
 docker cp udp.h compile:/
 docker cp udp.cpp compile:/
-docker exec compile bash -c "g++ -Wall -g -std=c++11 VShark.cpp arp.cpp icmp.cpp ip.cpp mac.cpp tcp.cpp udp.cpp helper.cpp"
-docker cp compile:/a.out a.out
-docker cp a.out network:/a.out
-rm a.out
-docker start -a -i network
-# apt-get install arp-scan
-# docker exec -it network arp-scan 172.17.0.1
+docker cp tcp.h compile:/
+docker cp tcp.cpp compile:/
+docker cp helper.h compile:/
+docker cp helper.cpp compile:/
+
+docker exec compile bash -c "g++ -Wall -g -std=c++11 VShark.cpp mac.cpp arp.cpp ip.cpp icmp.cpp udp.cpp tcp.cpp helper.cpp -o VShark"
+docker cp compile:/VShark VShark
+docker cp VShark network:/VShark
+rm VShark
+docker exec -it network bash -c "./VShark"
+
+# 打开另一个Terminal
+# docker exec network bash -c "arp-scan 172.17.0.1"
+# docker exec network bash -c "nslookup baidu.com"
+# docker exec network bash -c "ping 111.13.101.208 -c 1"
+# docker exec network bash -c "curl 111.13.101.208"
