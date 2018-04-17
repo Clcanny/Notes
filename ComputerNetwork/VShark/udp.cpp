@@ -1,4 +1,9 @@
 #include "udp.h"
+#include "helper.h"
+
+#include <stdio.h>
+#include <cassert>
+#include <arpa/inet.h>
 
 void UdpHeader::toHost()
 {

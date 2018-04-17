@@ -45,9 +45,21 @@
 # docker network disconnect bridge compile
 
 docker cp VShark.cpp compile:/
-docker cp parse.h compile:/
-docker cp parse.cpp compile:/
-docker exec compile bash -c "g++ -Wall -g -std=c++11 VShark.cpp parse.cpp"
+docker cp helper.h compile:/
+docker cp helper.cpp compile:/
+docker cp arp.h compile:/
+docker cp arp.cpp compile:/
+docker cp icmp.h compile:/
+docker cp icmp.cpp compile:/
+docker cp ip.h compile:/
+docker cp ip.cpp compile:/
+docker cp mac.h compile:/
+docker cp mac.cpp compile:/
+docker cp tcp.h compile:/
+docker cp tcp.cpp compile:/
+docker cp udp.h compile:/
+docker cp udp.cpp compile:/
+docker exec compile bash -c "g++ -Wall -g -std=c++11 VShark.cpp arp.cpp icmp.cpp ip.cpp mac.cpp tcp.cpp udp.cpp helper.cpp"
 docker cp compile:/a.out a.out
 docker cp a.out network:/a.out
 rm a.out
