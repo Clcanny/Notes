@@ -1,5 +1,5 @@
-#ifndef DEMONS_MAC_HEADER
-#define DEMONS_MAC_HEADER
+#ifndef DEMONS_MAC_H
+#define DEMONS_MAC_H
 
 #include <inttypes.h>
 

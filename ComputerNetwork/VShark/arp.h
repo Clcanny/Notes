@@ -1,5 +1,5 @@
-#ifndef DEMONS_ARP_HEADER
-#define DEMONS_ARP_HEADER
+#ifndef DEMONS_ARP_H
+#define DEMONS_ARP_H
 
 #include <inttypes.h>
 
