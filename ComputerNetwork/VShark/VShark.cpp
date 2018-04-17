@@ -47,8 +47,6 @@ int main()
             ip->toHost();
             ip->check(n_read);
             n_read -= ip->print();
-            {
-            }
 
             switch (ip->upperLayerProtocol)
             {
@@ -56,7 +54,8 @@ int main()
                 {
                     IcmpHeader *icmp = (IcmpHeader *)ip->getData();
                     icmp->toHost();
-                    /* icmp->print(); */
+                    icmp->check(n_read);
+                    n_read -= icmp->print();
                     break;
                 }
 
@@ -73,9 +72,7 @@ int main()
                 {
                     TcpHeader *tcp = (TcpHeader *)(ip->getData());
                     tcp->toHost();
-                    tcp->print();
-                    printf("\n");
-                    tcp->getData();
+                    n_read -= tcp->print();
                     break;
                 }
             }

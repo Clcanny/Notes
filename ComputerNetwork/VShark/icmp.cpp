@@ -4,7 +4,7 @@
 #include <cassert>
 #include <arpa/inet.h>
 
-void check(uint32_t length)
+void IcmpHeader::check(uint32_t length)
 {
     assert (sizeof(IcmpHeader) == 8);
 }
