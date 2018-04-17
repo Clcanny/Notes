@@ -5,6 +5,11 @@
 #include <cassert>
 #include <arpa/inet.h>
 
+void UdpHeader::check(uint32_t length)
+{
+    assert (this->length == length);
+}
+
 void UdpHeader::toHost()
 {
     srcPort = ntohs(srcPort);
