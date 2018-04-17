@@ -4,19 +4,27 @@
 #include <cassert>
 #include <arpa/inet.h>
 
+void ArpHeader::check(uint32_t length)
+{
+    assert (sizeof(ArpHeader) == 28);
+
+    /* Ethernet */
+    assert (hardwareType == htons(1));
+    /* IPv4 */
+    assert (protocolType == htons(0x0800));
+}
+
 void ArpHeader::toHost()
 {
     hardwareType = ntohs(hardwareType);
     protocolType = ntohs(protocolType);
     operation = ntohs(operation);
 
-    /* Ethernet */
     assert (hardwareType == 1);
-    /* IPv4 */
     assert (protocolType == 0x0800);
 }
 
-void ArpHeader::print()
+uint32_t ArpHeader::print()
 {
     printf("senderHardwareAddress: %02x:%02x:%02x:%02x:%02x:%02x\n",
             senderHardwareAddress[0], senderHardwareAddress[1],
@@ -35,4 +43,6 @@ void ArpHeader::print()
     printf("targetProtocolAddress: %d.%d.%d.%d\n",
             targetProtocolAddress[0], targetProtocolAddress[1],
             targetProtocolAddress[2], targetProtocolAddress[3]);
+
+    return sizeof(ArpHeader);
 }

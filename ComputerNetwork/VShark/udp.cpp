@@ -12,9 +12,10 @@ void UdpHeader::toHost()
     length = ntohs(length);
 }
 
-void UdpHeader::print()
+uint32_t UdpHeader::print()
 {
     printf("source port: %d, destination port: %d, length: %d\n", srcPort, dstPort, length);
+    return sizeof(UdpHeader);
 }
 
 uint8_t *UdpHeader::getData()

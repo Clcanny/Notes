@@ -18,7 +18,7 @@ void TcpHeader::toHost()
     urgentDataPointer = ntohs(urgentDataPointer);
 }
 
-void TcpHeader::print()
+uint32_t TcpHeader::print()
 {
     printf("srcPort: %u, dstPort: %u\n", srcPort, dstPort);
     printf("sequenceNumber: %u, ackNumber: %u\n", sequenceNumber, ackNumber);
@@ -32,6 +32,8 @@ void TcpHeader::print()
             (mixFields & 0x0002) >> 1,
             (mixFields & 0x0001)
           );
+
+    return getHeaderLength();
 }
 
 uint8_t *TcpHeader::getData()

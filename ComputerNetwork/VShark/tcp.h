@@ -21,9 +21,9 @@ class TcpHeader
         /* don't support options */
 
     public:
-        bool check(int length);
+        void check(uint32_t length);
         void toHost();
-        void print();
+        uint32_t print();
         uint8_t *getData();
 
         uint16_t getHeaderLength();

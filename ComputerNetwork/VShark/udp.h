@@ -13,9 +13,9 @@ class UdpHeader
         uint16_t checksum;
 
     public:
-        bool check();
+        void check(uint32_t length);
         void toHost();
-        void print();
+        uint32_t print();
         uint8_t *getData();
 };
 

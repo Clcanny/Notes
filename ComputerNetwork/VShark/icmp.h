@@ -25,8 +25,9 @@ class IcmpHeader
         };
 
     public:
+        void check(uint32_t length);
         void toHost();
-        void print();
+        uint32_t print();
 };
 
 #endif

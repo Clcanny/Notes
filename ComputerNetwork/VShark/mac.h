@@ -17,10 +17,11 @@ class MacHeader
         uint16_t type;
 
     public:
-        bool check(int length);
+        void check(uint32_t length);
         void toHost();
-        void print();
+        uint32_t print();
         uint8_t *getData();
+
         bool isIp();
         bool isArp();
 };

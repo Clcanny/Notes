@@ -5,13 +5,14 @@
 #include <cassert>
 #include <arpa/inet.h>
 
-bool IpHeader::check()
+void IpHeader::check(uint32_t length)
 {
+    assert (sizeof(IpHeader) == 20);
     uint16_t checksum = headerChecksum;
     /* headerChecksum = 0; */
     assert ((flagsFragmentationOffset & 0x8000) == 0); 
 
-    return ::check((uint16_t *)this, checksum, getDatagramLength());
+    ::check((uint16_t *)this, checksum, getDatagramLength());
 }
 
 void IpHeader::toHost()
@@ -22,7 +23,7 @@ void IpHeader::toHost()
     dstIpAddress = ntohl(dstIpAddress);
 }
 
-void IpHeader::print()
+uint32_t IpHeader::print()
 {
     printf("headerLength: %d, version: %d, identifier: %d, ttl: %d\n",
             headerLength, version, identifier, timeToLive);
@@ -39,6 +40,8 @@ void IpHeader::print()
                                    (dstIpAddress & 0x00ff0000) >> 16,
                                    (dstIpAddress & 0x0000ff00) >> 8,
                                    (dstIpAddress & 0x000000ff));
+
+    return getHeaderLength();
 }
 
 uint8_t *IpHeader::getData()
@@ -47,7 +50,7 @@ uint8_t *IpHeader::getData()
     return ((uint8_t *)this) + getHeaderLength();
 }
 
-int IpHeader::getHeaderLength()
+uint32_t IpHeader::getHeaderLength()
 {
     return headerLength << 2;
 }

@@ -28,12 +28,12 @@ class IpHeader
         /* 不支持options */
 
     public:
-        bool check();
+        void check(uint32_t length);
         void toHost();
-        void print();
+        uint32_t print();
         uint8_t *getData();
 
-        int getHeaderLength();
+        uint32_t getHeaderLength();
         uint16_t getDatagramLength();
         bool getFlagDontFragment();
         bool getFlagMoreFragments();
