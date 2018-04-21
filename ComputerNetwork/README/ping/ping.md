@@ -126,10 +126,12 @@ docker build -t network:ubuntu -f network.ubuntu.dockerfile .
 3. 扩大套接字接收缓冲区，防止缓冲区溢出
 4. 设置`ICMP`数据报的报头
 5. 发送数据
-6. 监听文件描述符集合，
+6. 监听文件描述符集合
 7. 等待任意`ICMP`报文的到达而唤醒程序
 8. 根据`IP`地址过滤`ICMP`报文
 9. 统计并显示
+
+![3](3.jpg)
 
 ## 运行结果截图 ##
 
@@ -145,8 +147,16 @@ docker build -t network:ubuntu -f network.ubuntu.dockerfile .
 
 ## 对比样例程序 ##
 
+头部类的布局方式部分参考`Linux`的对应文件，但处理函数没有参考
+
 ## 代码创新 ##
 
 封装杂乱的`API`
 
 使用`epoll`
+
+使用`Docker`作为实验软件：
+
+1. 更低的资源消耗
+2. 更快的启动速度
+3. 更高的自动化（全部脚本化）

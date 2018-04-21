@@ -51,6 +51,8 @@
 13. 打印剩余的内容，跳转到2
 14. 打印`TCP`头部，跳转到2
 
+![12](12.jpg)
+
 ## 运行结果截图 ##
 
 ![7](7.jpg)
@@ -65,9 +67,17 @@
 
 ## 相关参考资料 ##
 
+[linux/arp.c at master · spotify/linux · GitHub](https://github.com/spotify/linux/blob/master/net/ipv4/arp.c)
+
+[ip.h File Reference](https://github.com/spotify/linux/blob/master/net/ipv4/arp.c)
+
+[linux/udp.c at master · torvalds/linux · GitHub](https://github.com/torvalds/linux/blob/master/net/ipv4/udp.c)
+
+[linux/tcp.h at master · torvalds/linux · GitHub](https://github.com/torvalds/linux/blob/master/include/net/tcp.h)
+
 ## 对比样例程序 ##
 
-无
+所有的头部类都参考书本以及`Linux`的部分代码，仅仅是字段布局，没有参考任何处理函数
 
 ## 代码个人创新以及思考 ##
 
@@ -78,3 +88,8 @@
 3. `print`
 
 本程序直接在同一个线程中收取数据并解析，可能导致性能问题：应该采用一对多的线程模型
+
+实验没有采用虚拟机而是直接使用`Docker`：
+
+1. 虚拟化带来的资源消耗较低
+2. 过程可以脚本化，自动化程度较高
