@@ -1,0 +1,93 @@
+__atomic_store
+bits/atomic_base.h
+
+0000000000000690 <_Z14atomicFunctionv>:
+ # 通过移动栈顶栈底指针新建一个函数栈
+ 690:	55                   	push   %rbp
+ 691:	48 89 e5             	mov    %rsp,%rbp
+ 694:	48 83 ec 10          	sub    $0x10,%rsp
+ # %rax = %rbp - 0x4
+ # %rax 指向变量 a 的地址
+ 698:	48 8d 45 fc          	lea    -0x4(%rbp),%rax
+ # %rdi 作为即将调用的函数的第一个参数
+ # %rdi 指向变量 a 的地址
+ # 即将调用的函数的类型大约是 void(int *)
+ 69c:	48 89 c7             	mov    %rax,%rdi
+ 69f:	e8 50 00 00 00       	callq  6f4 <_ZNSt6atomicIiEC1Ev>
+    00000000000006f4 <_ZNSt6atomicIiEC1Ev>:
+     6f4:	55                   	push   %rbp
+     6f5:	48 89 e5             	mov    %rsp,%rbp
+     6f8:	48 83 ec 10          	sub    $0x10,%rsp
+     # *(%rbp - 0x8) = %rdi
+     # 将第一个参数入栈
+     6fc:	48 89 7d f8          	mov    %rdi,-0x8(%rbp)
+     # 我们没有开 O2 优化
+     # %rax = *(%rbp - 0x8)
+     700:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+     # 将原参数作为第一个参数调用函数
+     # %rdi = %rax
+     704:	48 89 c7             	mov    %rax,%rdi
+     # 函数的类型是 void(int *)
+     707:	e8 dc ff ff ff       	callq  6e8 <_ZNSt13__atomic_baseIiEC1Ev>
+     70c:	90                   	nop
+        00000000000006e8 <_ZNSt13__atomic_baseIiEC1Ev>:
+         6e8:	55                   	push   %rbp
+         6e9:	48 89 e5             	mov    %rsp,%rbp
+         # 将传入参数压栈
+         6ec:	48 89 7d f8          	mov    %rdi,-0x8(%rbp)
+         6f0:	90                   	nop
+         6f1:	5d                   	pop    %rbp
+         6f2:	c3                   	retq   
+         6f3:	90                   	nop
+         70d:	c9                   	leaveq 
+         70e:	c3                   	retq   
+         70f:	90                   	nop
+ # %rax = %rbp - 4
+ 6a4:	48 8d 45 fc          	lea    -0x4(%rbp),%rax
+ # 根据 calling convetion ，%esi 是第二个参数的存放寄存去
+ 6a8:	be 00 00 00 00       	mov    $0x0,%esi
+ 6ad:	48 89 c7             	mov    %rax,%rdi
+ # 即将调用的函数的类型大概是 void(int *, int)
+ 6b0:	e8 5b 00 00 00       	callq  710 <_ZNSt13__atomic_baseIiEaSEi>
+ 6b5:	48 8d 45 fc          	lea    -0x4(%rbp),%rax
+ 6b9:	be 00 00 00 00       	mov    $0x0,%esi
+ 6be:	48 89 c7             	mov    %rax,%rdi
+ # 即将调用的函数的类型大概是 void(int *, int)
+ 6c1:	e8 92 00 00 00       	callq  758 <_ZNSt13__atomic_baseIiEppEi>
+ 6c6:	90                   	nop
+ 6c7:	c9                   	leaveq 
+ 6c8:	c3                   	retq   
+
+demangle: std::__atomic_base<int>::operator=(int)
+0000000000000710 <_ZNSt13__atomic_baseIiEaSEi>:
+ 710:	55                   	push   %rbp
+ 711:	48 89 e5             	mov    %rsp,%rbp
+ 714:	48 83 ec 30          	sub    $0x30,%rsp
+ 718:	48 89 7d d8          	mov    %rdi,-0x28(%rbp)
+ 71c:	89 75 d4             	mov    %esi,-0x2c(%rbp)
+ 71f:	48 8b 45 d8          	mov    -0x28(%rbp),%rax
+ 723:	48 89 45 f8          	mov    %rax,-0x8(%rbp)
+ 727:	8b 45 d4             	mov    -0x2c(%rbp),%eax
+ 72a:	89 45 f4             	mov    %eax,-0xc(%rbp)
+ 72d:	c7 45 f0 05 00 00 00 	movl   $0x5,-0x10(%rbp)
+ 734:	8b 45 f0             	mov    -0x10(%rbp),%eax
+ 737:	be ff ff 00 00       	mov    $0xffff,%esi
+ # %esi = 0xffff = __memory_order_modifier.__memory_order_mask
+ # __m = %edi = %eax = *(%rbp - 0x10) = 0x5 = memory_order.memory_order_seq_cst
+ # *(%rbp - 0xc) = *(%rbp - 0x2c) = %esi = 第二个形式参数 = 0x0
+ 73c:	89 c7                	mov    %eax,%edi
+ # demangle: std::operator&(std::memory_order, std::__memory_order_modifier)
+ 73e:	e8 91 ff ff ff       	callq  6d4 <_ZStanSt12memory_orderSt23__memory_order_modifier>
+ 743:	89 45 ec             	mov    %eax,-0x14(%rbp)
+ 746:	8b 55 f4             	mov    -0xc(%rbp),%edx
+ 749:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+ 74d:	89 10                	mov    %edx,(%rax)
+ 74f:	0f ae f0             	mfence 
+ 752:	8b 45 d4             	mov    -0x2c(%rbp),%eax
+ 755:	c9                   	leaveq 
+ 756:	c3                   	retq   
+ 757:	90                   	nop
+
+tmp=`gcc -Q -O0 --help=optimizers 2>&1 | perl -ane 'if ($F[1] =~/enabled/) {$F[0] =~ s/^\s*-f/-fno-/g;push @o,$F[0];}} END {print join(" ", @o)'`
+g++ -std=c++11 -O0 $tmp atomic.cpp -o atomic
+g++ -std=c++11 -O0 `gcc -Q -O0 --help=optimizers 2>&1 | perl -ane 'if ($F[1] =~/enabled/) {$F[0] =~ s/^\s*-f/-fno-/g;push @o,$F[0];}} END {print join(" ", @o)'` atomic.cpp -o atomic
