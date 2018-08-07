@@ -306,8 +306,6 @@ print array[0] \
 }'
 ```
 
-
-
 ## Program ##
 
 ```shell
